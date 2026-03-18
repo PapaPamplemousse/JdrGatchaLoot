@@ -4,34 +4,26 @@ from tkinter import messagebox
 import os 
 
 class InputPanel(tk.Frame):
-    def __init__(self, parent, on_launch_cb):
+    def __init__(self, parent, on_launch_cb, on_jackpot_cb): # Ajout du callback jackpot
         super().__init__(parent, bg="#333", padx=10, pady=10)
         self.on_launch = on_launch_cb
+        self.on_jackpot = on_jackpot_cb
         self.entries = {}
+        self.blink_job = None # Pour gérer l'animation de clignotement
         
         self.croupier_space = tk.Frame(self, bg="#333", height=200) 
         self.croupier_space.pack(fill=tk.X, pady=(0, 20)) 
 
-        # --- CHARGEMENT ASYNCHRONE DU GIF ---
+        # --- CHARGEMENT DE L'IMAGE FIXE (PNG) ---
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.img_path = os.path.join(base_dir, "assets", "croupier.gif")
-
-        self.frames = []
-        self.load_index = 0
-        self.current_frame = 0
+        self.img_path = os.path.join(base_dir, "assets", "croupier.png")
 
         try:
-            # On charge UNIQUEMENT la première image pour que l'appli s'ouvre direct
-            first_frame = tk.PhotoImage(file=self.img_path, format="gif -index 0")
-            self.frames.append(first_frame)
-            self.lbl_croupier = tk.Label(self.croupier_space, image=self.frames[0], bg="#333")
+            self.croupier_img = tk.PhotoImage(file=self.img_path)
+            self.lbl_croupier = tk.Label(self.croupier_space, image=self.croupier_img, bg="#333")
             self.lbl_croupier.pack(expand=True)
-            
-            # On lance le chargement du reste en arrière-plan (10ms plus tard)
-            self.after(10, self._load_remaining_frames)
-            
         except tk.TclError:
-            self.lbl_croupier = tk.Label(self.croupier_space, text="[ Placez 'croupier.gif'\ndans le dossier 'assets' ]", bg="#222", fg="#777")
+            self.lbl_croupier = tk.Label(self.croupier_space, text="[ Placez 'croupier.png'\ndans le dossier 'assets' ]", bg="#222", fg="#777")
             self.lbl_croupier.pack(expand=True, fill=tk.BOTH)
 
         # --- LE RESTE DE L'INTERFACE ---
@@ -40,29 +32,15 @@ class InputPanel(tk.Frame):
         self.add_input("Résultat du D20:", "tier")
 
         self.btn_lancer = tk.Button(self, text="LANCER LE TIRAGE", bg="#FF5722", fg="white", font=("Arial", 12, "bold"), command=self.submit)
-        self.btn_lancer.pack(pady=20, fill=tk.X)
+        self.btn_lancer.pack(pady=10, fill=tk.X)
+
+        # --- NOUVEAU : BOUTON JACKPOT ---
+        # Il est masqué par défaut (pack_forget)
+        self.btn_jackpot = tk.Button(self, text="★★★ JACKPOT ★★★", bg="gold", fg="red", font=("Impact", 18, "bold"), relief=tk.RAISED, borderwidth=5, command=self.trigger_jackpot)
+        # On ne le pack pas tout de suite.
 
         self.entries["tier"].bind("<Return>", lambda event: self.submit())
         self.entries["tier"].focus()
-
-    def _load_remaining_frames(self):
-        """Charge les images du GIF une par une sans bloquer l'interface."""
-        self.load_index += 1
-        try:
-            frame = tk.PhotoImage(file=self.img_path, format=f"gif -index {self.load_index}")
-            self.frames.append(frame)
-            # On programme le chargement de la suivante
-            self.after(10, self._load_remaining_frames)
-        except tk.TclError:
-            # Quand ça plante, c'est qu'on a atteint la fin du GIF ! On démarre l'animation.
-            self._animate_croupier()
-
-    def _animate_croupier(self):
-        """Fait boucler l'animation."""
-        if self.frames:
-            self.current_frame = (self.current_frame + 1) % len(self.frames)
-            self.lbl_croupier.config(image=self.frames[self.current_frame])
-            self.after(100, self._animate_croupier) # Vitesse : 100ms
 
     def add_input(self, label_text, key):
         frame = tk.Frame(self, bg="#333")
@@ -73,6 +51,7 @@ class InputPanel(tk.Frame):
         self.entries[key] = entry
 
     def submit(self):
+        self.hide_jackpot() # Cache le jackpot au nouveau lancer
         try:
             tier_val = int(self.entries["tier"].get() or 0)
         except ValueError:
@@ -90,6 +69,34 @@ class InputPanel(tk.Frame):
         for entry in self.entries.values():
             entry.delete(0, tk.END)
         self.btn_lancer.config(state=tk.NORMAL)
+        if "tier" in self.entries:
+            self.entries["tier"].focus()
+
+    # --- LOGIQUE DU JACKPOT ---
+    def show_jackpot(self):
+        """Affiche le bouton Jackpot et commence le clignotement."""
+        self.btn_jackpot.pack(pady=10, fill=tk.X)
+        self._blink_jackpot()
+
+    def hide_jackpot(self):
+        """Cache le bouton Jackpot et arrête le clignotement."""
+        if self.blink_job is not None:
+            self.after_cancel(self.blink_job)
+            self.blink_job = None
+        self.btn_jackpot.pack_forget()
+
+    def trigger_jackpot(self):
+        """Action quand on clique sur le bouton Jackpot."""
+        self.hide_jackpot()
+        self.on_jackpot() # Appelle la fonction dans app.py
+
+    def _blink_jackpot(self):
+        """Alterne les couleurs du bouton."""
+        current_bg = self.btn_jackpot.cget("background")
+        new_bg = "white" if current_bg == "gold" else "gold"
+        self.btn_jackpot.config(background=new_bg)
+        # Re-planifie le clignotement toutes les 300ms
+        self.blink_job = self.after(300, self._blink_jackpot)
 
 class ResultPanel(tk.Frame):
     # Reste exactement comme avant

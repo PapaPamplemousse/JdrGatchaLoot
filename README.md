@@ -21,7 +21,7 @@ Le projet est conçu pour être léger et fonctionner sans aucune dépendance ex
 
 1. Assurez-vous d'avoir Python 3.x installé sur votre machine.
 2. Téléchargez ou clonez le répertoire du projet.
-3. Placez une image ou une animation nommée `croupier.gif` dans le dossier `assets/` (taille recommandée : environ 200 à 250 pixels de large).
+3. Placez une image `croupier.png` dans le dossier `assets/` (taille recommandée : environ 200 à 250 pixels de large).
 4. Exécutez le script principal depuis votre terminal :
 
 ```bash
