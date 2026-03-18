@@ -66,17 +66,56 @@ def get_bounds(table):
 GACHA_FILE = os.path.join(DATA_DIR, "gacha_data.json")
 
 def load_gacha_data():
-    """Charge les données de Pity et de Fragments."""
+    """Charge les données de Pity, de Fragments, le VIP et le Gacha-Dex."""
     try:
         with open(GACHA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)  # <-- LA CORRECTION EST ICI
+            data = json.load(f)
+            # Rétrocompatibilité : on ajoute les nouvelles clés si elles manquent
+            if "total_rolls" not in data: data["total_rolls"] = 0
+            if "debt_po" not in data: data["debt_po"] = 0
+            if "discovered_bases" not in data: data["discovered_bases"] = []
+            return data
     except FileNotFoundError:
         return {
             "pity": {"max_pity": 5, "max_roll_to_increment": 5, "current_pity": 0},
-            "soul_fragments": 0
+            "soul_fragments": 0,
+            "total_rolls": 0,
+            "debt_po": 0,
+            "discovered_bases": []
         }
+
 # Initialisation des données locales
 GACHA_DATA = load_gacha_data()
+
+def save_gacha_pity(current_pity):
+    GACHA_DATA["pity"]["current_pity"] = current_pity
+    _save_all_data()
+
+def save_gacha_fragments(fragment_count):
+    GACHA_DATA["soul_fragments"] = fragment_count
+    _save_all_data()
+
+# --- NOUVELLES FONCTIONS DE SUIVI (VIP & DEX) ---
+def increment_rolls(count=1):
+    """Augmente le nombre total de tirages pour le niveau VIP."""
+    GACHA_DATA["total_rolls"] += count
+    _save_all_data()
+
+def add_discovery(base_name):
+    """Ajoute un objet au Gacha-Dex s'il n'a jamais été vu."""
+    if base_name and base_name not in GACHA_DATA["discovered_bases"]:
+        GACHA_DATA["discovered_bases"].append(base_name)
+        _save_all_data()
+        return True # C'est une nouvelle découverte !
+    return False
+
+def _save_all_data():
+    """Sauvegarde tout le JSON sur le disque."""
+    try:
+        with open(GACHA_FILE, "w", encoding="utf-8") as f:
+            json.dump(GACHA_DATA, f, indent=4)
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde Gacha : {e}")
 
 def save_gacha_pity(current_pity):
     """Met à jour et sauvegarde la pitié."""

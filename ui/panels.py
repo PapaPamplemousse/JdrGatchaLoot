@@ -10,18 +10,20 @@ CASINO_DARK = "#003300"
 
 
 class InputPanel(tk.Frame):
-    def __init__(self, parent, on_launch_cb, on_jackpot_cb, on_multi_soul_cb, initial_fragments, is_cursed=False): 
-        self.bg_color = "#4a0000" if is_cursed else "#004d00" 
+    def __init__(self, parent, on_launch_cb, on_jackpot_cb, on_multi_soul_cb, on_loan_cb, on_forge_cb, initial_fragments, x10_cost=10, is_cursed=False): 
+        self.bg_color = "#4a0000" if is_cursed else "#004d00"
         self.dark_color = "#2a0000" if is_cursed else "#003300"
-        
+        self.x10_cost = x10_cost
+
         super().__init__(parent, bg=self.bg_color, padx=10, pady=10)
         self.on_launch = on_launch_cb
         self.on_jackpot = on_jackpot_cb
         self.on_multi_soul = on_multi_soul_cb
+        self.on_loan = on_loan_cb     
+        self.on_forge = on_forge_cb   
         self.entries = {}
         self.blink_job = None
         
-        # --- L'ESPACE DU CROUPIER ---
         self.multi_container = tk.Frame(self, bg=self.bg_color)
         self.multi_container.pack(side=tk.BOTTOM, fill=tk.X)
 
@@ -33,8 +35,22 @@ class InputPanel(tk.Frame):
 
         self.input_frame = tk.Frame(self, bg=self.bg_color)
         self.input_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
-        tk.Label(self.input_frame, text="Résultat du D20:", fg="#CCC", bg=self.bg_color, width=18, anchor="w").pack(side=tk.LEFT)
-        self.entries["tier"] = tk.Entry(self.input_frame, bg=self.dark_color, fg="white", insertbackground="white")
+        
+        # 1. Menu des Bannières
+        self.banner_frame = tk.Frame(self.input_frame, bg=self.bg_color)
+        self.banner_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 10))
+        tk.Label(self.banner_frame, text="Bannière :", fg="#FFD700", bg=self.bg_color, width=18, anchor="w", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
+        
+        self.banner_var = tk.StringVar(value="Standard (0 Âme)")
+        self.banner_menu = tk.OptionMenu(self.banner_frame, self.banner_var, "Standard (0 Âme)", "Armurerie (1 Âme)", "Mystique (2 Âmes)")
+        self.banner_menu.config(bg=self.dark_color, fg="white", highlightthickness=0, font=("Arial", 9, "bold"))
+        self.banner_menu.pack(side=tk.RIGHT, expand=True, fill=tk.X)
+
+        # 2. Champ du D20
+        self.d20_frame = tk.Frame(self.input_frame, bg=self.bg_color)
+        self.d20_frame.pack(side=tk.TOP, fill=tk.X)
+        tk.Label(self.d20_frame, text="Résultat du D20 :", fg="#CCC", bg=self.bg_color, width=18, anchor="w").pack(side=tk.LEFT)
+        self.entries["tier"] = tk.Entry(self.d20_frame, bg=self.dark_color, fg="white", insertbackground="white")
         self.entries["tier"].pack(side=tk.RIGHT, expand=True, fill=tk.X)
 
         tk.Label(self, text="♦ RÉSULTATS DU DÉ ♦", fg="white", bg=self.bg_color, font=("Arial", 14, "bold")).pack(side=tk.BOTTOM, pady=10)
@@ -75,16 +91,23 @@ class InputPanel(tk.Frame):
         self.btn_jackpot.pack(pady=5, fill=tk.X)
         self.btn_jackpot.config(state=tk.DISABLED, bg=self.dark_color, fg="#666") 
         
-        self.btn_multi_x5 = tk.Button(self.multi_container, text="♦ TIRAGE MULTI x5 ♦", font=("Arial", 12, "bold"), command=lambda: self.trigger_multi_soul(5))
+        # --- NOUVEAUX BOUTONS (Emprunt et Forge) ---
+        self.btn_loan = tk.Button(self.multi_container, text="✠ EMPRUNT USURAIRE (+5 Âmes) ✠", font=("Arial", 10, "bold"), bg="#b71c1c", fg="white", command=self.on_loan)
+        self.btn_loan.pack(side=tk.TOP, pady=5, fill=tk.X)
+
+        self.btn_forge = tk.Button(self.multi_container, text="⚒ TRANSMUTATION (-3 Âmes) ⚒", font=("Arial", 11, "bold"), command=self.on_forge)
+        self.btn_forge.pack(side=tk.TOP, pady=5, fill=tk.X)
+
+        self.btn_multi_x5 = tk.Button(self.multi_container, text="♦ TIRAGE MULTI x5 (-5 Âmes)♦", font=("Arial", 12, "bold"), command=lambda: self.trigger_multi_soul(5))
         self.btn_multi_x5.pack(side=tk.TOP, pady=5, fill=tk.X)
 
-        self.btn_multi_x10 = tk.Button(self.multi_container, text="♦ TIRAGE x10 (Rare Garanti) ♦", font=("Arial", 12, "bold"), borderwidth=3, relief=tk.RIDGE, command=lambda: self.trigger_multi_soul(10))
+        self.btn_multi_x10 = tk.Button(self.multi_container, text=f"♦ TIRAGE x10 (-{self.x10_cost} Âmes) ♦", font=("Arial", 12, "bold"), borderwidth=3, relief=tk.RIDGE, command=lambda: self.trigger_multi_soul(10))
         self.btn_multi_x10.pack(side=tk.TOP, pady=5, fill=tk.X)
 
         self.update_soul_fragments(initial_fragments)
         self.entries["tier"].bind("<Return>", lambda event: self.submit())
         self.entries["tier"].focus()
-
+   
     def submit(self):
         self.hide_jackpot()
         try:
@@ -128,18 +151,28 @@ class InputPanel(tk.Frame):
         self.btn_jackpot.config(background=new_bg)
         self.blink_job = self.after(300, self._blink_jackpot)
 
+
     def update_soul_fragments(self, fragment_count):
         self.lbl_frag_value.config(text=f"x{fragment_count} ")
+        
+        # Forge (Coûte 3)
+        if fragment_count >= 3:
+            self.btn_forge.config(state=tk.NORMAL, bg="#E65100", fg="white")
+        else:
+            self.btn_forge.config(state=tk.DISABLED, bg=self.dark_color, fg="#666")
+
+        # Multi x5
         if fragment_count >= 5:
             self.btn_multi_x5.config(state=tk.NORMAL, bg="#9C27B0", fg="white")
         else:
-            self.btn_multi_x5.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666")
+            self.btn_multi_x5.config(state=tk.DISABLED, bg=self.dark_color, fg="#666")
 
-        if fragment_count >= 10:
+        # Multi x10
+        if fragment_count >= self.x10_cost:
             self.btn_multi_x10.config(state=tk.NORMAL, bg="#6A1B9A", fg="gold")
         else:
-            self.btn_multi_x10.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666")
-
+            self.btn_multi_x10.config(state=tk.DISABLED, bg=self.dark_color, fg="#666")
+            
     def trigger_multi_soul(self, count):
         self.on_multi_soul(count)
 

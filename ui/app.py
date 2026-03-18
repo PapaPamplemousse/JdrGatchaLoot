@@ -95,6 +95,85 @@ class LootCasinoApp(tk.Tk):
         except Exception:
             return "des millions de"
 
+    def get_vip_level(self):
+        """Calcule le statut VIP du groupe en fonction du nombre de tirages totaux."""
+        rolls = generator.GACHA_DATA.get("total_rolls", 0)
+        if rolls >= 160: return 5, "BALEINE LÉGENDAIRE", "#FFD700" # Or
+        if rolls >= 80: return 4, "FLAMBEUR MAÎTRE", "#E040FB"     # Violet
+        if rolls >= 40: return 3, "HABITUÉ DU CASINO", "#00FFFF"   # Cyan
+        if rolls >= 20: return 2, "CLIENT RÉGULIER", "#00FF00"      # Vert
+        if rolls >= 10: return 1, "AMATEUR", "#FFFFFF"              # Blanc
+        return 0, "NOUVEAU JOUEUR", "#888888"                       # Gris
+
+    def open_gachadex(self):
+        """Ouvre une fenêtre pop-up affichant la collection des objets découverts."""
+        dex_window = tk.Toplevel(self)
+        dex_window.title("⌘ Gacha-Dex - La Collection")
+        dex_window.geometry("600x700")
+        dex_window.configure(bg="#111")
+        
+        tk.Label(dex_window, text="COMPLEXE DU COLLECTIONNEUR", font=("Impact", 24), bg="#111", fg="#FFD700").pack(pady=20)
+        
+        # Statistiques
+        total_bases = len(generator.BASE_ITEMS)
+        discovered = len(generator.GACHA_DATA.get("discovered_bases", []))
+        pct = int((discovered / total_bases) * 100) if total_bases > 0 else 0
+        
+        tk.Label(dex_window, text=f"Objets Uniques Découverts : {discovered} / {total_bases} ({pct}%)", font=("Arial", 16, "bold"), bg="#111", fg="#00FFFF").pack(pady=10)
+        
+        # Liste déroulante
+        list_frame = tk.Frame(dex_window, bg="#222")
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        scrollbar = tk.Scrollbar(list_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        listbox = tk.Listbox(list_frame, bg="#222", fg="#FFF", font=("Consolas", 12), yscrollcommand=scrollbar.set)
+        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=listbox.yview)
+        
+        # Peupler la liste avec de la frustration
+        for base in generator.BASE_ITEMS:
+            name = base["name"]
+            if name in generator.GACHA_DATA.get("discovered_bases", []):
+                listbox.insert(tk.END, f"✓ {name}")
+                listbox.itemconfig(tk.END, {'fg': '#00FF00'})
+            else:
+                listbox.insert(tk.END, f"▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒")
+                listbox.itemconfig(tk.END, {'fg': '#444444'})
+                
+        tk.Button(dex_window, text="FERMER LE REGISTRE", bg="#E53935", fg="white", font=("Arial", 12, "bold"), command=dex_window.destroy).pack(pady=10)
+
+    def open_pay_debt(self):
+        """Ouvre une boîte de dialogue pour rembourser une partie ou toute la dette."""
+        from tkinter import simpledialog # Importation locale pour éviter les bugs
+        
+        current_debt = generator.GACHA_DATA.get("debt_po", 0)
+        if current_debt <= 0:
+            return
+            
+        # Ouvre une fenêtre demandant un chiffre
+        amount = simpledialog.askinteger(
+            "Guichet du Casino", 
+            f"La mafia vous regarde avec insistance.\nVotre dette est de {current_debt} PO.\n\nCombien de PO souhaitez-vous rembourser ?", 
+            minvalue=1, maxvalue=current_debt, parent=self
+        )
+        
+        if amount: # Si le joueur a cliqué sur "OK" avec un montant valide
+            # On déduit la somme
+            generator.GACHA_DATA["debt_po"] -= amount
+            generator._save_all_data() # Sauvegarde forcée dans le JSON
+            
+            new_debt = generator.GACHA_DATA["debt_po"]
+            
+            if new_debt <= 0:
+                messagebox.showinfo("Contrat Terminé", "☆★ DETTE SOLDÉE ! ★☆ \n\nLe Casino vous remercie de votre honnêteté. Vos malédictions sont levées... pour le moment.")
+            else:
+                messagebox.showinfo("Paiement Accepté", f"Paiement de {amount} PO reçu.\nIl vous reste encore {new_debt} PO à rembourser. Ne traînez pas.")
+            
+            # On rafraîchit l'écran d'accueil pour mettre à jour le montant sur le bouton (ou le cacher)
+            self.build_start_screen()
+
     def build_start_screen(self):
         self.clear_window()
         self.start_frame = tk.Frame(self, bg="#111")
@@ -106,6 +185,10 @@ class LootCasinoApp(tk.Tk):
         self.marquee_text_id = self.marquee_canvas.create_text(1500, 32, text=history_text, font=("Consolas", 18, "bold"), fill="#FFFF00", anchor="w")
         self.marquee_x_pos = 1500 
         self._animate_marquee()
+
+        vip_level, vip_title, vip_color = self.get_vip_level()
+        
+        tk.Label(self.start_frame, text=f"♚ STATUT : VIP {vip_level} - {vip_title} ♚", font=("Arial", 14, "bold"), bg="#111", fg=vip_color).pack(pady=(0, 10))
 
         self.title_label = tk.Label(self.start_frame, text="$$$ GRAND ROUE DU LOOT $$$", font=("Impact", 48, "bold"), bg="#111", fg="#FFD700")
         self.title_label.pack(pady=(40, 10))
@@ -128,6 +211,19 @@ class LootCasinoApp(tk.Tk):
                                   bg="#4a0000", fg="#ff4444", activebackground="#ff0000", activeforeground="black", 
                                   relief=tk.RAISED, bd=5, padx=40, pady=10, command=lambda: self.launch_game(True))
         self.btn_blood.pack(pady=10)
+
+       
+        self.btn_dex = tk.Button(self.start_frame, text="⌘ VOIR LA COLLECTION (GACHA-DEX)", font=("Arial", 14, "bold"), 
+                                  bg="#1E88E5", fg="white", relief=tk.RAISED, bd=4, padx=20, pady=5, command=self.open_gachadex)
+        self.btn_dex.pack(pady=20)
+
+        current_debt = generator.GACHA_DATA.get("debt_po", 0)
+        if current_debt > 0:
+            formatted_debt = f"{current_debt:,}".replace(",", " ")
+            self.btn_pay_debt = tk.Button(self.start_frame, text=f"$ REMBOURSER LA DETTE ({formatted_debt} PO) $", 
+                                          font=("Arial", 14, "bold"), bg="#FF9800", fg="black", 
+                                          relief=tk.RAISED, bd=4, padx=20, pady=5, command=self.open_pay_debt)
+            self.btn_pay_debt.pack(pady=10)
 
     def build_main_screen(self):
         self.clear_window()
@@ -155,23 +251,38 @@ class LootCasinoApp(tk.Tk):
         
         self.lbl_bankroll = tk.Label(self.bankroll_frame, text="0 PO", fg="#FF0000", bg="#000", font=("Courier", 24, "bold"))
         self.lbl_bankroll.pack(pady=(0, 5))
+
+        self.debt_po = generator.GACHA_DATA.get("debt_po", 0)
+        self.lbl_debt = tk.Label(self.bankroll_frame, text="", fg="#ff4444", bg="#000", font=("Arial", 10, "bold"))
+        self.lbl_debt.pack(pady=(0, 5))
+
         self._update_bankroll_display(0)
+        self._update_debt_display()
 
         self.btn_finish = tk.Button(self.right_frame, text="> TERMINER LE TIRAGE <", bg="#2196F3", fg="white", 
                                     font=("Arial", 12, "bold"), command=self.save_and_reset)
         self.btn_finish.pack(side=tk.BOTTOM, pady=20, padx=10, fill=tk.X)
 
+        vip_level, _, _ = self.get_vip_level()
+        self.current_pity_max = 4 if vip_level >= 2 else self.pity_max # VIP 2
+        discounted_x10_cost = 8 if vip_level >= 4 else 10 # VIP 4
+
         self.pity_frame = tk.Frame(self.right_frame, bg=bg_color)
         self.pity_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 20))
         
-        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.pity_max}", bg=bg_color, fg="white", font=("Arial", 12, "bold"))
+        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.current_pity_max}", bg=bg_color, fg="white", font=("Arial", 12, "bold"))
         self.pity_label.pack()
         
         self.pity_canvas = tk.Canvas(self.pity_frame, height=20, bg="#222", highlightthickness=1, highlightbackground="#555")
         self.pity_canvas.pack(fill=tk.X, pady=5)
         
-        # On passe le mode maudit à InputPanel
-        self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments, self.is_cursed_mode)
+        
+        self.input_panel = InputPanel(
+            self.right_frame, self.handle_launch, self.handle_jackpot_click, 
+            self.handle_multi_pull_soul, self.handle_loan, self.handle_forge, 
+            self.soul_fragments, x10_cost=discounted_x10_cost, is_cursed=self.is_cursed_mode
+        )
+
         self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.update() 
         self.update_pity_bar()
@@ -192,6 +303,85 @@ class LootCasinoApp(tk.Tk):
         else: display = f"{pc} PC"
             
         self.lbl_bankroll.config(text=display)
+    def _update_debt_display(self):
+        """Met à jour le texte de la dette usuraire."""
+        if self.debt_po > 0:
+            self.lbl_debt.config(text=f"☠ DETTE EN COURS : {self.debt_po:,} PO ☠".replace(",", " "))
+        else:
+            self.lbl_debt.config(text="")
+
+    def handle_loan(self):
+        """Le Pacte Faustien : des fragments contre une dette colossale et un malus."""
+        msg = (" PACTE D'USURE\n\n"
+               "Vous êtes sur le point d'emprunter 5 Fragments d'Âme.\n\n"
+               "EN ÉCHANGE :\n"
+               "1. Vous contractez une dette immédiate de 1000 PO.\n"
+               "2. Vous subirez une MALÉDICTION aléatoire en jeu tant que la dette ne sera pas payée.\n\n"
+               "Signer avec votre sang ?")
+               
+        if messagebox.askyesno("L'Entité vous écoute", msg):
+            # Application de la dette et des âmes
+            self.debt_po += 1000
+            generator.GACHA_DATA["debt_po"] = self.debt_po
+            
+            self.soul_fragments += 5
+            generator.save_gacha_fragments(self.soul_fragments) # Ceci sauvegarde aussi la dette !
+            
+            self.input_panel.update_soul_fragments(self.soul_fragments)
+            self._update_debt_display()
+            
+            curses = [
+                "Vulnérabilité au Feu et à l'Acide.", 
+                "Malchance : Désavantage sur vos jets de sauvegarde.", 
+                "Paranoïa : Impossible de faire un repos long réparateur.", 
+                "Poches trouées : Vous perdez 10% de votre or par jour.",
+                "Cécité nocturne : Vous êtes aveugle dans la pénombre."
+            ]
+            chosen_curse = random.choice(curses)
+            
+            self.result_panel.clear()
+            self.result_panel.set_banner("Vide")
+            self.result_panel.append_text(f"☠ CONTRAT SIGNÉ ☠ \n\n+5 Fragments d'Âme reçus.\n-1000 PO de Dette ajoutés au registre.\n\nMALÉDICTION ACTIVE : {chosen_curse}\n")
+            self.result_panel.append_text("Le Casino vous remercie de votre fidélité éternelle.")
+
+    def handle_forge(self):
+        """Détruit le dernier objet généré pour en recréer un nouveau du même Tier."""
+        if not self.current_items or self.current_items[-1].tier == "Vide":
+            messagebox.showwarning("Transmutation", "Il n'y a aucun objet valide à transmuter ! Lancez d'abord les dés.")
+            return
+            
+        cost = 3
+        if self.soul_fragments < cost:
+            return # Sécurité
+            
+        old_item = self.current_items[-1]
+        
+        if messagebox.askyesno("Forge des Âmes", f"Dépenser {cost} Âmes pour détruire [{old_item.base_name}] et générer un NOUVEL objet garanti de Tier {old_item.tier} ?"):
+            # Déduction des âmes
+            self.soul_fragments -= cost
+            generator.save_gacha_fragments(self.soul_fragments)
+            self.input_panel.update_soul_fragments(self.soul_fragments)
+            
+            # Retrait de l'argent de l'ancien objet de la Bankroll
+            old_pc = (old_item.price_po * 10000) + (old_item.price_pa * 100) + old_item.price_pc
+            self._update_bankroll_display(-old_pc)
+            
+            # Recherche des données du Tier actuel pour forger le nouveau
+            tier_dict = next((t for t in generator.TIERS if t["name"] == old_item.tier), None)
+            if not tier_dict: return
+            
+            # Création du nouvel objet
+            new_item = self._build_single_item(tier_dict)
+            self.current_items[-1] = new_item # Remplace l'ancien objet dans l'historique
+            
+            # Ajout de l'argent du nouvel objet
+            new_pc = (new_item.price_po * 10000) + (new_item.price_pa * 100) + new_item.price_pc
+            self._update_bankroll_display(new_pc)
+            
+            self.result_panel.clear()
+            self.result_panel.set_banner(new_item.tier)
+            self.result_panel.append_text("⚒ LA MATIÈRE SE MÉTAMORPHOSE ! ⚒\n")
+            self.result_panel.display_item(new_item)
 
     def update_pity_bar(self):
         self.pity_canvas.delete("all")
@@ -206,6 +396,24 @@ class LootCasinoApp(tk.Tk):
         tier_val = rolls["tier"]
         original_roll = rolls["tier"]
         is_pity_pull = False
+
+        selected_banner = self.input_panel.banner_var.get()
+        banner_cost = 0
+        if "Armurerie" in selected_banner: banner_cost = 1
+        elif "Mystique" in selected_banner: banner_cost = 2
+
+        if banner_cost > 0:
+            if self.soul_fragments < banner_cost:
+                messagebox.showerror("Fonds Insuffisants", f"Cette bannière coûte {banner_cost} Fragment(s) d'Âme.\nFaites des tirages Standard pour en obtenir !")
+                self.input_panel.btn_lancer.config(state=tk.NORMAL)
+                return
+            # On déduit le coût
+            self.soul_fragments -= banner_cost
+            generator.save_gacha_fragments(self.soul_fragments)
+            self.input_panel.update_soul_fragments(self.soul_fragments)
+        # -----------------------------------------
+
+        generator.increment_rolls(1)
 
         if self.pity_counter >= self.pity_max:
             tier_val = 20
@@ -280,8 +488,26 @@ class LootCasinoApp(tk.Tk):
         item = LootItem()
         item.tier = tier_data["name"]
         
-        min_type, max_type = generator.get_bounds(generator.ITEM_TYPES)
-        type_data = generator.determine_item_type(random.randint(min_type, max_type))
+        selected_banner = self.input_panel.banner_var.get()
+        
+        if "Armurerie" in selected_banner:
+            # Filtre uniquement les armes et armures
+            allowed = ["melee", "ranged", "armor"]
+            filtered_types = [t for t in generator.ITEM_TYPES if t["id"] in allowed]
+            type_data = random.choice(filtered_types)
+            
+        elif "Mystique" in selected_banner:
+            # Filtre uniquement la magie, les familiers et les reliques
+            allowed = ["scroll", "artifact", "pet_capsule"]
+            filtered_types = [t for t in generator.ITEM_TYPES if t["id"] in allowed]
+            type_data = random.choice(filtered_types)
+            
+        else:
+            # Bannière Standard (Comportement normal)
+            min_type, max_type = generator.get_bounds(generator.ITEM_TYPES)
+            type_data = generator.determine_item_type(random.randint(min_type, max_type))
+        # ------------------------------------------
+        
         item.item_type = type_data["name"]
         
         if type_data["id"] == "scroll":
@@ -303,6 +529,7 @@ class LootCasinoApp(tk.Tk):
             
             if base_data:
                 item.base_name = base_data["name"]
+                generator.add_discovery(item.base_name)
                 item.stats = base_data.get("base_stats", {}).copy()
                 item.description = base_data.get("description", "")
                 if "set_id" in base_data:
@@ -492,6 +719,7 @@ class LootCasinoApp(tk.Tk):
 
     def handle_multi_pull_soul(self, count, tier_garanti=None):
         """Déduit les fragments, génère les items, calcule la cagnotte et trouve le meilleur loot."""
+        generator.increment_rolls(count)
         self.soul_fragments -= count
         generator.save_gacha_fragments(self.soul_fragments)
         self.input_panel.update_soul_fragments(self.soul_fragments)

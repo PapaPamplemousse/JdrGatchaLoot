@@ -4,7 +4,8 @@ from core.generator import TIERS
 
 class CasinoWheel(tk.Canvas):
     def __init__(self, parent, size=300, **kwargs):
-        super().__init__(parent, width=size, height=size, bg="#2b2b2b", highlightthickness=0, **kwargs)
+        # Le fond #222 et highlightthickness=0 fusionnent la roue avec le fond !
+        super().__init__(parent, width=size, height=size, bg="#222", highlightthickness=0, **kwargs)
         self.size = size
         self.center = size / 2
         self.radius = size / 2 - 20
@@ -21,6 +22,19 @@ class CasinoWheel(tk.Canvas):
         self._build_wheel()
 
     def _build_wheel(self):
+        # --- 1. LA JANTE DORÉE (Contour extérieur) ---
+        # On dessine un cercle légèrement plus grand que les parts de la roue
+        self.create_oval(
+            14, 14, self.size-14, self.size-14,
+            fill="#111", outline="#FFD700", width=6
+        )
+
+        # --- 2. L'OMBRE DE LA ROUE ---
+        self.create_oval(
+            19, 19, self.size-19, self.size-19,
+            fill="#000", outline="", width=0
+        )
+
         total_weight = sum((t["max"] - t["min"] + 1) for t in TIERS)
         start_angle = 0
         
@@ -29,7 +43,7 @@ class CasinoWheel(tk.Canvas):
             extent = (weight / total_weight) * 360
             color = self.colors.get(tier["name"], "#FFF")
             
-            # Création de l'arc
+            # Création de l'arc (les parts)
             arc_id = self.create_arc(
                 20, 20, self.size-20, self.size-20,
                 start=start_angle, extent=extent,
@@ -41,12 +55,38 @@ class CasinoWheel(tk.Canvas):
             })
             start_angle += extent
             
-        # Pointeur (triangle en haut)
+        # --- 3. LE MOYEU CENTRAL (Le clou au milieu de la roue) ---
+        self.create_oval(
+            self.center - 15, self.center - 15,
+            self.center + 15, self.center + 15,
+            fill="#FFD700", outline="#111", width=2
+        )
+        self.create_oval(
+            self.center - 5, self.center - 5,
+            self.center + 5, self.center + 5,
+            fill="#333", outline="", width=0
+        )
+            
+        # --- 4. LE POINTEUR AMÉLIORÉ (Avec effet de relief) ---
+        # A. L'ombre du pointeur (décalée de 2 pixels en bas à droite)
         self.create_polygon(
-            self.center - 15, 20,
-            self.center + 15, 20,
-            self.center, 50,  # Plus long
-            fill="red", outline="white"
+            self.center - 13, 17,
+            self.center + 17, 17,
+            self.center + 2, 52,
+            fill="#000"
+        )
+        # B. Le vrai pointeur (Rouge avec contour Or)
+        self.create_polygon(
+            self.center - 15, 15,
+            self.center + 15, 15,
+            self.center, 50, 
+            fill="#E53935", outline="#FFD700", width=2
+        )
+        # C. Le petit clou argenté sur le pointeur
+        self.create_oval(
+            self.center - 4, 18,
+            self.center + 4, 26,
+            fill="#E0E0E0", outline="#111", width=1
         )
 
     def spin_to_tier(self, target_tier_name, callback):
@@ -59,12 +99,9 @@ class CasinoWheel(tk.Canvas):
         target_angle_local = target_segment["base_start"] + (target_segment["extent"] / 2)
         target_rotation = (90 - target_angle_local) % 360
         
-        # CHANGEMENT 1 : On passe de 1080 (3 tours) à 360 (1 seul tour bonus)
-        #total_rotation_needed = 360 + target_rotation - self.current_rotation
-        # Le compromis parfait : 2 tours complets (720 degrés)
-        total_rotation_needed = 1080 + target_rotation - self.current_rotation
+        # Le compromis parfait : 2 tours complets (720 degrés) + la rotation cible
+        total_rotation_needed = 720 + target_rotation - self.current_rotation
 
-        # CHANGEMENT 2 : On augmente la vitesse initiale de 25 à 45
         self._animate_spin(total_rotation_needed, 45, callback)
 
     def _animate_spin(self, degrees_left, speed, callback):
@@ -79,8 +116,5 @@ class CasinoWheel(tk.Canvas):
             new_start = (seg["base_start"] + self.current_rotation) % 360
             self.itemconfig(seg["id"], start=new_start)
 
-        # CHANGEMENT 3 : On freine plus fort (0.90 au lieu de 0.96)
-        #new_speed = max(2, speed * 0.90) 
         new_speed = max(1.5, speed * 0.94) 
-        # CHANGEMENT 4 : On réduit le délai de rafraîchissement (15ms au lieu de 20ms)
         self.after(15, self._animate_spin, degrees_left - actual_step, new_speed, callback)
