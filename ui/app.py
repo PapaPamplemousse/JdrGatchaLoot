@@ -38,14 +38,79 @@ class LootCasinoApp(tk.Tk):
         
         self.build_start_screen()
 
+    def load_recent_history(self):
+        """Récupère les objets des derniers tirages pour le bandeau défilant."""
+        if getattr(sys, 'frozen', False):
+            log_dir = os.path.join(os.path.dirname(sys.executable), "log")
+        else:
+            log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")
+            
+        if not os.path.exists(log_dir):
+            return "♦ BIENVENUE A LA GRAND ROUE DU LOOT ! FAITES VOTRE PREMIER TIRAGE ! ♦"
+            
+        # Trie les fichiers du plus récent au plus ancien
+        files = sorted([f for f in os.listdir(log_dir) if f.startswith("tirage_") and f.endswith(".json")], reverse=True)
+        if not files:
+            return "♦ BIENVENUE A LA GRAND ROUE DU LOOT ! FAITES VOTRE PREMIER TIRAGE ! ♦"
+            
+        recent_items = []
+        for f in files[:5]: # On fouille dans les 5 derniers tirages
+            try:
+                with open(os.path.join(log_dir, f), "r", encoding="utf-8") as file:
+                    data = json.load(file)
+                    for item in data.get("items", []):
+                        if item.get("tier") != "Vide" and item.get("name"):
+                            recent_items.append(f"[{item.get('tier').upper()}] {item.get('name')}")
+            except Exception:
+                pass
+                
+        if not recent_items:
+            return "♦ LA BANQUE EST PLEINE ! LANCEZ LES DÉS ! ♦"
+            
+        # On assemble tout avec des séparateurs et on le multiplie pour faire une très longue bande
+        history_str = "   ✦   ".join(recent_items)
+        return f"   ✦   {history_str}   ✦   " * 10
+
+    # def build_start_screen(self):
+    #     self.clear_window()
+    #     frame = tk.Frame(self, bg="#222")
+    #     frame.pack(expand=True)
+        
+    #     tk.Label(frame, text="♦ LOOT CASINO ♦", font=("Arial", 32, "bold"), fg="#FFC107", bg="#222").pack(pady=20)
+    #     tk.Button(frame, text="NOUVEAU TIRAGE", font=("Arial", 16, "bold"), bg="#4CAF50", fg="white", 
+    #               padx=20, pady=10, command=self.build_main_screen).pack()
     def build_start_screen(self):
         self.clear_window()
-        frame = tk.Frame(self, bg="#222")
-        frame.pack(expand=True)
         
-        tk.Label(frame, text="♦ LOOT CASINO ♦", font=("Arial", 32, "bold"), fg="#FFC107", bg="#222").pack(pady=20)
-        tk.Button(frame, text="NOUVEAU TIRAGE", font=("Arial", 16, "bold"), bg="#4CAF50", fg="white", 
-                  padx=20, pady=10, command=self.build_main_screen).pack()
+        # Un cadre principal très sombre pour faire ressortir les couleurs
+        self.start_frame = tk.Frame(self, bg="#111")
+        self.start_frame.pack(expand=True, fill=tk.BOTH)
+        
+        # --- 1. LE BANDEAU DÉFILANT (AÉROPORT / CASINO) ---
+        # Fond vert sombre, bordure vert fluo
+        self.marquee_canvas = tk.Canvas(self.start_frame, bg="#002200", height=60, highlightthickness=3, highlightbackground="#00FF00")
+        self.marquee_canvas.pack(fill=tk.X, pady=(0, 40))
+        
+        history_text = self.load_recent_history()
+        
+        # Le texte écrit en Jaune fluo avec une police de type terminal
+        self.marquee_text_id = self.marquee_canvas.create_text(
+            1500, 32, text=history_text, 
+            font=("Consolas", 18, "bold"), fill="#FFFF00", anchor="w"
+        )
+        self.marquee_x_pos = 1500 # Position de départ à l'extérieur de l'écran
+        self._animate_marquee()
+
+        # --- 2. TITRE CLIGNOTANT FAÇON NÉON ---
+        self.title_label = tk.Label(self.start_frame, text="$$$ GRAND ROUE DU LOOT $$$", font=("Impact", 48, "bold"), bg="#111", fg="#FFD700")
+        self.title_label.pack(pady=(40, 20))
+        self._blink_title()
+
+        # --- 3. GROS BOUTON D'ENTRÉE ---
+        self.btn_play = tk.Button(self.start_frame, text=" ENTRER DANS LE CASINO ", font=("Arial", 22, "bold"), 
+                                  bg="#E53935", fg="white", activebackground="#FFEB3B", activeforeground="red", 
+                                  relief=tk.RAISED, bd=8, padx=40, pady=20, command=self.build_main_screen)
+        self.btn_play.pack(pady=20)
 
     def build_main_screen(self):
         self.clear_window()
@@ -81,10 +146,6 @@ class LootCasinoApp(tk.Tk):
         self.pity_canvas = tk.Canvas(self.pity_frame, height=20, bg="#222", highlightthickness=1, highlightbackground="#555")
         self.pity_canvas.pack(fill=tk.X, pady=5)
         
-        # self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click)
-        # self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        # self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments, self.frag_icon_path)
-        # self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments)
         self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.update() 
@@ -439,6 +500,35 @@ class LootCasinoApp(tk.Tk):
         self.input_panel.btn_lancer.config(state=tk.NORMAL)
         self.update_pity_bar()
 
+    def _animate_marquee(self):
+        """Fait défiler le texte de droite à gauche sur le Canvas."""
+        # Sécurité : si on a changé d'écran, on arrête l'animation
+        if not hasattr(self, 'marquee_canvas') or not self.marquee_canvas.winfo_exists():
+            return
+            
+        # Vitesse de défilement (-4 pixels vers la gauche)
+        self.marquee_canvas.move(self.marquee_text_id, -4, 0)
+        
+        coords = self.marquee_canvas.coords(self.marquee_text_id)
+        if coords:
+            # Si le texte est parti beaucoup trop loin à gauche, on le relance à droite
+            if coords[0] < -8000: 
+                self.marquee_canvas.coords(self.marquee_text_id, self.winfo_width(), 32)
+                
+        # On boucle l'animation toutes les 30 millisecondes (environ 30 FPS)
+        self.after(30, self._animate_marquee)
+
+    def _blink_title(self):
+        """Fait clignoter le titre principal entre Or et Rouge vif."""
+        if not hasattr(self, 'title_label') or not self.title_label.winfo_exists():
+            return
+            
+        current_fg = self.title_label.cget("fg")
+        new_fg = "#FF0000" if current_fg == "#FFD700" else "#FFD700"
+        self.title_label.config(fg=new_fg)
+        
+        # On boucle le clignotement toutes les 600 ms
+        self.after(600, self._blink_title)
 
     def save_and_reset(self):
         # log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")
