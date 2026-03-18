@@ -125,8 +125,11 @@ class ResultPanel(tk.Frame):
         if item.stats:
             output += "Stats :\n"
             for stat, val in item.stats.items():
-                sign = "+" if val > 0 else ""
-                output += f"  {stat}: {sign}{val}\n"
+                if isinstance(val, (int, float)):
+                    sign = "+" if val > 0 else ""
+                    output += f"  {stat}: {sign}{val}\n"
+                else:
+                    output += f"  {stat}: {val}\n"
         
         if getattr(item, 'set_id', None):
             output += f"\n[+] Set : {item.set_name}\n"

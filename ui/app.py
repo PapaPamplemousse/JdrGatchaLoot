@@ -25,6 +25,10 @@ class LootCasinoApp(tk.Tk):
         
         self.current_items = []
         self.jackpot_history = []
+
+        self.pity_counter = generator.PITY_DATA.get("current_pity", 0)
+        self.pity_max = generator.PITY_DATA.get("max_pity", 5)
+        self.pity_threshold = generator.PITY_DATA.get("max_roll_to_increment", 5)
         
         self.build_start_screen()
 
@@ -48,41 +52,132 @@ class LootCasinoApp(tk.Tk):
         self.right_frame = tk.Frame(self, bg="#333", width=300)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # --- PARTIE GAUCHE (Affichage uniquement) ---
-        self.wheel = CasinoWheel(self.left_frame, size=600)
+        # --- PARTIE GAUCHE ---
+        self.wheel = CasinoWheel(self.left_frame, size=400)
         self.wheel.pack(pady=10)
         
         self.result_panel = ResultPanel(self.left_frame)
         self.result_panel.pack(fill=tk.BOTH, expand=True)
-        # Le bouton "Terminer" a été retiré d'ici !
 
-        # --- PARTIE DROITE (Contrôles) ---
-        # 1. On ancre d'abord le bouton Terminer tout en bas du panneau droit
+        # --- PARTIE DROITE ---
         self.btn_finish = tk.Button(self.right_frame, text="> TERMINER LE TIRAGE <", bg="#2196F3", fg="white", 
                                     font=("Arial", 12, "bold"), command=self.save_and_reset)
         self.btn_finish.pack(side=tk.BOTTOM, pady=20, padx=10, fill=tk.X)
 
-        # 2. On place ensuite le panneau de saisie (qui contient Lancer et Jackpot) au-dessus
+        # --- NOUVEAU : LA JAUGE DE PITY ---
+        self.pity_frame = tk.Frame(self.right_frame, bg="#333")
+        self.pity_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 20))
+        
+        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.pity_max}", bg="#333", fg="white", font=("Arial", 12, "bold"))
+        self.pity_label.pack()
+        
+        # Jauge avec un fond gris sombre et une fine bordure pour bien la voir même vide
+        self.pity_canvas = tk.Canvas(self.pity_frame, height=20, bg="#222", highlightthickness=1, highlightbackground="#555")
+        self.pity_canvas.pack(fill=tk.X, pady=5)
+        
         self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click)
         self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+        self.update() 
+        self.update_pity_bar()
+
+    def update_pity_bar(self):
+        """Dessine et colorie la barre de Pity."""
+        self.pity_canvas.delete("all")
+        width = self.pity_canvas.winfo_width()
+        if width <= 1: width = 600 # Sécurité si la fenêtre n'est pas encore dessinée
+        
+        fill_width = (self.pity_counter / self.pity_max) * width
+        
+        # Couleur : Blanc si < 5, Violet si = 5
+        color = "#9C27B0" if self.pity_counter >= self.pity_max else "white"
+        
+        self.pity_canvas.create_rectangle(0, 0, fill_width, 25, fill=color, outline="")
+        self.pity_label.config(text=f"PITIÉ (Légendaire Garanti) : {self.pity_counter} / {self.pity_max}")
+
+
     def handle_launch(self, rolls):
-        tier_data = generator.determine_tier(rolls["tier"])
+        tier_val = rolls["tier"]
+        original_roll = rolls["tier"] # On garde le vrai jet en mémoire pour vérifier le seuil
+        is_pity_pull = False
+
+        # --- 1. VÉRIFICATION DE LA PITY ---
+        if self.pity_counter >= self.pity_max:
+            tier_val = 20 # On force le jet à 20 (Légendaire !)
+            self.pity_counter = 0
+            generator.save_pity(self.pity_counter) # Sauvegarde la remise à zéro
+            is_pity_pull = True
+
+        tier_data = generator.determine_tier(tier_val)
         if not tier_data:
             messagebox.showerror("Erreur", "Tier roll invalide.")
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             return
 
-        # On lance l'animation de la roue, puis on exécute la suite
-        self.wheel.spin_to_tier(tier_data["name"], lambda: self.generate_and_display(tier_data))
+        # --- 2. MISE À JOUR DU COMPTEUR DE PITY ---
+        if not is_pity_pull:
+            if tier_data["name"] == "Legendary":
+                self.pity_counter = 0 # Reset organique si le joueur a de la chance !
+                generator.save_pity(self.pity_counter)
+            elif original_roll <= self.pity_threshold and tier_data["name"] != "Vide":
+                self.pity_counter += 1 # Incrémente seulement si le jet est <= au seuil (ex: 5)
+                generator.save_pity(self.pity_counter)
+                
+        self.update_pity_bar()
+
+        # --- 3. MÉCANIQUE DE FAKE-OUT (Ascenseur émotionnel) ---
+        is_fake_out = False
+        fake_out_target = None
+        
+        # 5% de chance de fake-out sur un jet non-légendaire, non-vide et non-pity
+        if tier_data["name"] not in ["Legendary", "Vide"] and not is_pity_pull:
+            if random.randint(1, 100) <= 5: 
+                is_fake_out = True
+                fake_out_target = generator.determine_tier(20) # Devient Légendaire !
+
+        # --- LANCEMENT DE LA ROUE ---
+        if is_fake_out:
+            # On tourne vers le "faux" tier, puis on déclenche l'animation de rupture
+            self.wheel.spin_to_tier(tier_data["name"], lambda: self.trigger_fake_out(fake_out_target))
+        else:
+            # Comportement normal
+            self.wheel.spin_to_tier(tier_data["name"], lambda: self.generate_and_display(tier_data))
+
+    def trigger_fake_out(self, real_tier_data):
+        """Animation textuelle de rupture pour l'effet Fake-Out."""
+        self.result_panel.clear()
+        self.result_panel.text_area.config(state=tk.NORMAL, bg="white", fg="black")
+        self.result_panel.text_area.insert(tk.END, "\n\n... Attente de la matière ...\n")
+        self.update()
+        
+        # Effet visuel : l'écran devient noir et le texte rouge sang
+        self.after(400, lambda: self._fake_out_step_2(real_tier_data))
+
+    def _fake_out_step_2(self, real_tier_data):
+        self.result_panel.text_area.config(bg="#1E1E1E", fg="#FF0000")
+        self.result_panel.text_area.insert(tk.END, "\n⚠ ANOMALIE DÉTECTÉE ⚠\nLA MATIÈRE SE FRAGMENTE !!\n")
+        self.update()
+        
+        # Puisque le fake-out donne un légendaire, on remet la Pity à 0
+        self.pity_counter = 0
+        generator.save_pity(self.pity_counter)
+        self.update_pity_bar()
+
+        # On affiche le vrai loot après 4 seconde de suspense
+        self.after(4800, lambda: self._finish_fake_out(real_tier_data))
+
+    def _finish_fake_out(self, real_tier_data):
+        self.result_panel.text_area.config(bg="#1E1E1E", fg="#00FF00") # Retour au vert Matrix
+        self.generate_and_display(real_tier_data)
+
 
     def generate_and_display(self, tier_data):
         # 1. GESTION DU COFFRE VIDE
         if tier_data["name"] == "Vide":
             self.result_panel.clear()
             
-            # Tirage au sort : 70% de chance (1 à 70)
-            if random.randint(1, 100) <= 70:
+            # Tirage au sort : 68% de chance (1 à 70)
+            if random.randint(1, 100) <= 68:
                 # CAS DU MIMIC
                 mimic_art = (
                     "      _____\n"
@@ -95,7 +190,6 @@ class LootCasinoApp(tk.Tk):
                 self.result_panel.append_text(mimic_art)
                 self.result_panel.append_text("Le coffre révèle des dents acérées et une langue violacée !\n")
                 self.result_panel.append_text("C'EST UN MIMIC ! Il vous attaque ! ")
-                # Ici, tu pourrais ajouter un appel à une fonction de combat : self.lancer_combat_mimic()
             else:
                 # CAS VRAIMENT VIDE
                 self.result_panel.append_text("\_(oo))_/¯ LE COFFRE EST VIDE...\n\n")
@@ -107,10 +201,6 @@ class LootCasinoApp(tk.Tk):
         item = LootItem()
         item.tier = tier_data["name"]
         
-        # # 2. AUTOMATISATION DES JETS GLOBAUX
-        # type_roll = random.randint(1, 100)
-        # base_roll = random.randint(1, 100)
-
         # 2. JETS DYNAMIQUES POUR LE TYPE D'OBJET
         min_type, max_type = generator.get_bounds(generator.ITEM_TYPES)
         type_roll = random.randint(min_type, max_type)
@@ -122,7 +212,6 @@ class LootCasinoApp(tk.Tk):
         if type_data["id"] == "scroll":
             min_scroll, max_scroll = generator.get_bounds(generator.SCROLLS.get("rarities", []))
             scroll_roll = random.randint(min_scroll, max_scroll)
-            #scroll_roll = random.randint(1, 100)
             rar_data = generator.determine_scroll_rarity(scroll_roll)
             if rar_data:
                 valid_spells = [s for s in generator.SCROLLS.get("spells", []) if s.get("rarity_id") == rar_data["id"]]
@@ -179,7 +268,6 @@ class LootCasinoApp(tk.Tk):
                         item.prefix = "Mythique"
 
         # 3. CALCUL DU PRIX (En pièces de cuivre : PC)
-        # J'ai équilibré pour que ça fasse entre 0 et 100 PO environ selon la rareté
         base_value_pc = {
             "Common": random.randint(50, 5000),      # De 50 PC à 50 PA
             "Uncommon": random.randint(5000, 20000), # De 50 PA à 2 PO
@@ -201,15 +289,6 @@ class LootCasinoApp(tk.Tk):
         self.result_panel.display_item(item)
         
         self.after(500, self.ask_jackpot)
-
-    # def ask_jackpot(self):
-    #     # --- NOUVEAU : POPUP JACKPOT ---
-    #     if messagebox.askyesno("Jackpot $$$", "VOULEZ-VOUS UTILISER LE JACKPOT ?\n\nAttention : Quitte ou double !"):
-    #         jackpot_roll = random.randint(1, 100)
-    #         self.process_jackpot(jackpot_roll)
-    #     else:
-    #         self.result_panel.append_text("\nTirage terminé. Terminez pour sauvegarder, ou modifiez vos jets pour un autre tirage.")
-    #         self.input_panel.btn_lancer.config(state=tk.NORMAL)
 
     def ask_jackpot(self):
         # --- NOUVEAU : On affiche le gros bouton au lieu du pop-up ---
