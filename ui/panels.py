@@ -4,42 +4,42 @@ from tkinter import messagebox
 import os
 import sys
 from core.audio import audio_player
+
 # --- COULEUR DU TAPIS DE CASINO ---
-CASINO_BG = "#004d00" 
 CASINO_DARK = "#003300"
 
 
 class InputPanel(tk.Frame):
-    def __init__(self, parent, on_launch_cb, on_jackpot_cb, on_multi_soul_cb, initial_fragments): 
-        super().__init__(parent, bg=CASINO_BG, padx=10, pady=10)
+    def __init__(self, parent, on_launch_cb, on_jackpot_cb, on_multi_soul_cb, initial_fragments, is_cursed=False): 
+        self.bg_color = "#4a0000" if is_cursed else "#004d00" 
+        self.dark_color = "#2a0000" if is_cursed else "#003300"
+        
+        super().__init__(parent, bg=self.bg_color, padx=10, pady=10)
         self.on_launch = on_launch_cb
         self.on_jackpot = on_jackpot_cb
         self.on_multi_soul = on_multi_soul_cb
         self.entries = {}
         self.blink_job = None
         
-        # --- 1. SÉCURISATION DES CONTRÔLES (Ancrés en BAS) ---
-        # En attachant tout avec side=tk.BOTTOM, on s'assure qu'ils ne disparaîtront jamais
-        self.multi_container = tk.Frame(self, bg=CASINO_BG)
+        # --- L'ESPACE DU CROUPIER ---
+        self.multi_container = tk.Frame(self, bg=self.bg_color)
         self.multi_container.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.jackpot_container = tk.Frame(self, bg=CASINO_BG)
+        self.jackpot_container = tk.Frame(self, bg=self.bg_color)
         self.jackpot_container.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.btn_lancer = tk.Button(self, text="LANCER LE TIRAGE", bg="#FF5722", fg="white", font=("Arial", 12, "bold"), command=self.submit)
         self.btn_lancer.pack(side=tk.BOTTOM, pady=10, fill=tk.X)
 
-        # Zone de saisie manuelle (remplace l'ancienne fonction add_input)
-        self.input_frame = tk.Frame(self, bg=CASINO_BG)
+        self.input_frame = tk.Frame(self, bg=self.bg_color)
         self.input_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
-        tk.Label(self.input_frame, text="Résultat du D20:", fg="#CCC", bg=CASINO_BG, width=18, anchor="w").pack(side=tk.LEFT)
-        self.entries["tier"] = tk.Entry(self.input_frame, bg=CASINO_DARK, fg="white", insertbackground="white")
+        tk.Label(self.input_frame, text="Résultat du D20:", fg="#CCC", bg=self.bg_color, width=18, anchor="w").pack(side=tk.LEFT)
+        self.entries["tier"] = tk.Entry(self.input_frame, bg=self.dark_color, fg="white", insertbackground="white")
         self.entries["tier"].pack(side=tk.RIGHT, expand=True, fill=tk.X)
 
-        tk.Label(self, text="♦ RÉSULTATS DU DÉ ♦", fg="white", bg=CASINO_BG, font=("Arial", 14, "bold")).pack(side=tk.BOTTOM, pady=10)
+        tk.Label(self, text="♦ RÉSULTATS DU DÉ ♦", fg="white", bg=self.bg_color, font=("Arial", 14, "bold")).pack(side=tk.BOTTOM, pady=10)
 
-        # --- 2. L'ESPACE DU CROUPIER (Ancré en HAUT, prend la place restante) ---
-        self.croupier_space = tk.Frame(self, bg=CASINO_BG) 
+        self.croupier_space = tk.Frame(self, bg=self.bg_color) 
         self.croupier_space.pack(side=tk.TOP, fill=tk.BOTH, expand=True) 
 
         if getattr(sys, 'frozen', False):
@@ -51,34 +51,30 @@ class InputPanel(tk.Frame):
         self.frag_path = os.path.join(base_dir, "assets", "soul_fragment.png")
 
         try:
-            # On réduit l'image du croupier d'un tiers pour sauver de la place
-            self.croupier_img = tk.PhotoImage(file=self.img_path).zoom(3).subsample(4)
-            self.lbl_croupier = tk.Label(self.croupier_space, image=self.croupier_img, bg=CASINO_BG, bd=0)
+            self.croupier_img = tk.PhotoImage(file=self.img_path).subsample(2, 2)
+            self.lbl_croupier = tk.Label(self.croupier_space, image=self.croupier_img, bg=self.bg_color, bd=0)
             self.lbl_croupier.pack(expand=True)
         except tk.TclError:
-            self.lbl_croupier = tk.Label(self.croupier_space, text="[ Croupier ]", bg=CASINO_DARK, fg="#777")
+            self.lbl_croupier = tk.Label(self.croupier_space, text="[ Croupier ]", bg=self.dark_color, fg="#777")
             self.lbl_croupier.pack(expand=True, fill=tk.BOTH)
 
-        # --- SUPERPOSITION DES FRAGMENTS D'ÂME ---
-        self.soul_overlay = tk.Frame(self.croupier_space, bg=CASINO_BG)
+        self.soul_overlay = tk.Frame(self.croupier_space, bg=self.bg_color)
         self.soul_overlay.place(relx=0.98, rely=0.05, anchor="ne")
 
-        self.lbl_frag_value = tk.Label(self.soul_overlay, text=f"x{initial_fragments} ", fg="#E040FB", bg=CASINO_BG, font=("Arial", 16, "bold"))
+        self.lbl_frag_value = tk.Label(self.soul_overlay, text=f"x{initial_fragments} ", fg="#E040FB", bg=self.bg_color, font=("Arial", 16, "bold"))
         self.lbl_frag_value.pack(side=tk.LEFT)
 
         try:
-            self.frag_img = tk.PhotoImage(file=self.frag_path).subsample(3, 3) # Encore plus petit pour faire propre
-            self.lbl_frag_icon = tk.Label(self.soul_overlay, image=self.frag_img, bg=CASINO_BG, bd=0)
+            self.frag_img = tk.PhotoImage(file=self.frag_path).subsample(3, 3) 
+            self.lbl_frag_icon = tk.Label(self.soul_overlay, image=self.frag_img, bg=self.bg_color, bd=0)
             self.lbl_frag_icon.pack(side=tk.RIGHT)
         except tk.TclError:
-            tk.Label(self.soul_overlay, text="[ÂME]", fg="#E040FB", bg=CASINO_BG).pack(side=tk.RIGHT)
+            tk.Label(self.soul_overlay, text="[ÂME]", fg="#E040FB", bg=self.bg_color).pack(side=tk.RIGHT)
 
-        # --- 3. CONFIGURATION DES BOUTONS DE JEU ---
         self.btn_jackpot = tk.Button(self.jackpot_container, text="★★★ JACKPOT ★★★", font=("Impact", 16, "bold"), relief=tk.RAISED, borderwidth=5, command=self.trigger_jackpot)
         self.btn_jackpot.pack(pady=5, fill=tk.X)
-        self.btn_jackpot.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666") 
+        self.btn_jackpot.config(state=tk.DISABLED, bg=self.dark_color, fg="#666") 
         
-        # ATTENTION : side=tk.TOP à l'intérieur de leur propre conteneur pour respecter l'ordre d'affichage
         self.btn_multi_x5 = tk.Button(self.multi_container, text="♦ TIRAGE MULTI x5 ♦", font=("Arial", 12, "bold"), command=lambda: self.trigger_multi_soul(5))
         self.btn_multi_x5.pack(side=tk.TOP, pady=5, fill=tk.X)
 
@@ -88,8 +84,6 @@ class InputPanel(tk.Frame):
         self.update_soul_fragments(initial_fragments)
         self.entries["tier"].bind("<Return>", lambda event: self.submit())
         self.entries["tier"].focus()
-
-    # NOTE : L'ancienne fonction add_input est supprimée car intégrée directement dans le __init__
 
     def submit(self):
         self.hide_jackpot()
@@ -191,6 +185,13 @@ class ResultPanel(tk.Frame):
 
         if tier_name == "Legendary":
             self._blink_banner_legendary()
+
+        if tier_name in ["Very Rare", "Legendary"]:
+            audio_player.play("jackpot")
+        elif tier_name == "Vide":
+            audio_player.play("loose")
+        else:
+            audio_player.play("win")
 
     def _blink_banner_legendary(self):
         """Fait clignoter le bandeau légendaire frénétiquement."""

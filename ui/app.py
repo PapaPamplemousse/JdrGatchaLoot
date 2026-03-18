@@ -12,9 +12,6 @@ from core import generator
 from core.models import LootItem
 from core.audio import audio_player
 
-# --- RAPPEL DE LA COULEUR CASINO ---
-CASINO_BG = "#004d00"
-
 class LootCasinoApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -28,21 +25,23 @@ class LootCasinoApp(tk.Tk):
         
         self.current_items = []
         self.jackpot_history = []
-
-        # --- NOUVEAU : LA CAGNOTTE DE SESSION ---
         self.session_total_pc = 0
 
-        # --- SYSTÈME DE PITY ---
+        self.is_cursed_mode = False
+
         pity_cfg = generator.GACHA_DATA.get("pity", {})
         self.pity_counter = pity_cfg.get("current_pity", 0)
         self.pity_max = pity_cfg.get("max_pity", 5)
-        self.pity_threshold = pity_cfg.get("max_roll_to_increment", 5)
+        self.pity_threshold = pity_cfg.get("max_roll_to_increment", 3)
 
-        # --- SYSTÈME DE FRAGMENTS D'ÂME ---
         self.soul_fragments = generator.GACHA_DATA.get("soul_fragments", 0)
         self.frag_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "soul_fragment.png")
         
         self.build_start_screen()
+
+    def launch_game(self, cursed):
+        self.is_cursed_mode = cursed
+        self.build_main_screen()
 
     def load_recent_history(self):
         if getattr(sys, 'frozen', False):
@@ -101,7 +100,6 @@ class LootCasinoApp(tk.Tk):
         self.start_frame = tk.Frame(self, bg="#111")
         self.start_frame.pack(expand=True, fill=tk.BOTH)
         
-        # --- 1. LE BANDEAU DÉFILANT ---
         self.marquee_canvas = tk.Canvas(self.start_frame, bg="#002200", height=60, highlightthickness=3, highlightbackground="#00FF00")
         self.marquee_canvas.pack(fill=tk.X, pady=(0, 40))
         history_text = self.load_recent_history()
@@ -109,21 +107,27 @@ class LootCasinoApp(tk.Tk):
         self.marquee_x_pos = 1500 
         self._animate_marquee()
 
-        # --- 2. TITRE PRINCIPAL --
         self.title_label = tk.Label(self.start_frame, text="$$$ GRAND ROUE DU LOOT $$$", font=("Impact", 48, "bold"), bg="#111", fg="#FFD700")
-        self.title_label.pack(pady=(40, 20))
+        self.title_label.pack(pady=(40, 10))
         self._blink_title()
 
-        # --- 3. AFFICHAGE DES COMBINAISONS ---
         combo_count = self.get_combinations_count()
         self.combo_label = tk.Label(self.start_frame, text=f"♠♡♢♣ Plus de {combo_count} combinaisons d'objets uniques ! ♣♢♡♠", 
                                     font=("Arial", 18, "bold"), bg="#111", fg="#00FFFF")
         self.combo_label.pack(pady=(0, 30))
+        
+        tk.Label(self.start_frame, text="Seul le hasard décide de votre destin...", font=("Arial", 16, "italic"), bg="#111", fg="#888").pack(pady=(0, 30))
 
-        self.btn_play = tk.Button(self.start_frame, text=" ENTRER DANS LE CASINO ", font=("Arial", 22, "bold"), 
+        # --- NOUVEAUX BOUTONS D'ENTRÉE ---
+        self.btn_play = tk.Button(self.start_frame, text=" ENTRER DANS LE CASINO (Classique) ", font=("Arial", 22, "bold"), 
                                   bg="#E53935", fg="white", activebackground="#FFEB3B", activeforeground="red", 
-                                  relief=tk.RAISED, bd=8, padx=40, pady=20, command=self.build_main_screen)
-        self.btn_play.pack(pady=20)
+                                  relief=tk.RAISED, bd=8, padx=40, pady=10, command=lambda: self.launch_game(False))
+        self.btn_play.pack(pady=10)
+
+        self.btn_blood = tk.Button(self.start_frame, text="☙ MARCHÉ NOIR (-1 PV MAX) ☙", font=("Arial", 18, "bold"), 
+                                  bg="#4a0000", fg="#ff4444", activebackground="#ff0000", activeforeground="black", 
+                                  relief=tk.RAISED, bd=5, padx=40, pady=10, command=lambda: self.launch_game(True))
+        self.btn_blood.pack(pady=10)
 
     def build_main_screen(self):
         self.clear_window()
@@ -133,8 +137,10 @@ class LootCasinoApp(tk.Tk):
         self.left_frame = tk.Frame(self, bg="#222")
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        # --- APPLICATION DU TAPIS VERT CASINO SUR LE PANNEAU DROIT ---
-        self.right_frame = tk.Frame(self, bg=CASINO_BG, width=300)
+        # Le fond change selon le mode !
+        bg_color = "#4a0000" if self.is_cursed_mode else "#004d00"
+        
+        self.right_frame = tk.Frame(self, bg=bg_color, width=300)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
         self.wheel = CasinoWheel(self.left_frame, size=600)
@@ -143,31 +149,29 @@ class LootCasinoApp(tk.Tk):
         self.result_panel = ResultPanel(self.left_frame)
         self.result_panel.pack(fill=tk.BOTH, expand=True)
 
-        # --- NOUVEAU : LA CAGNOTTE LED (Bankroll) ---
         self.bankroll_frame = tk.Frame(self.right_frame, bg="#000", bd=5, relief=tk.SUNKEN)
         self.bankroll_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(10, 0))
         tk.Label(self.bankroll_frame, text="TOTAL DES GAINS", fg="#888", bg="#000", font=("Arial", 10, "bold")).pack(pady=(5,0))
         
-        # LED Rouge vif
         self.lbl_bankroll = tk.Label(self.bankroll_frame, text="0 PO", fg="#FF0000", bg="#000", font=("Courier", 24, "bold"))
         self.lbl_bankroll.pack(pady=(0, 5))
-        self._update_bankroll_display(0) # Formate l'affichage initial
+        self._update_bankroll_display(0)
 
-        # --- BOUTON TERMINER ---
         self.btn_finish = tk.Button(self.right_frame, text="> TERMINER LE TIRAGE <", bg="#2196F3", fg="white", 
                                     font=("Arial", 12, "bold"), command=self.save_and_reset)
         self.btn_finish.pack(side=tk.BOTTOM, pady=20, padx=10, fill=tk.X)
 
-        self.pity_frame = tk.Frame(self.right_frame, bg=CASINO_BG)
+        self.pity_frame = tk.Frame(self.right_frame, bg=bg_color)
         self.pity_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 20))
         
-        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.pity_max}", bg=CASINO_BG, fg="white", font=("Arial", 12, "bold"))
+        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.pity_max}", bg=bg_color, fg="white", font=("Arial", 12, "bold"))
         self.pity_label.pack()
         
         self.pity_canvas = tk.Canvas(self.pity_frame, height=20, bg="#222", highlightthickness=1, highlightbackground="#555")
         self.pity_canvas.pack(fill=tk.X, pady=5)
         
-        self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments)
+        # On passe le mode maudit à InputPanel
+        self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments, self.is_cursed_mode)
         self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.update() 
         self.update_pity_bar()
@@ -340,7 +344,6 @@ class LootCasinoApp(tk.Tk):
 
     def generate_and_display(self, tier_data):
         if tier_data["name"] == "Vide":
-            audio_player.play("loose")
             self.result_panel.clear()
             self.result_panel.set_banner("Vide")
             if random.randint(1, 100) <= 68:
@@ -359,14 +362,16 @@ class LootCasinoApp(tk.Tk):
                 self.result_panel.append_text("¯\_(oo))_/¯ LE COFFRE EST VIDE...\n\n")
                 self.result_panel.append_text("Il n'y a absolument rien ici à part de la poussière.")
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
+        # --- NOUVEAU : LA PROPOSITION MAUDITE ---
+            if self.is_cursed_mode:
+                if messagebox.askyesno("Pacte de Sang", "Votre tirage est perdu...\n\nL'entité vous propose un marché :\nSacrifiez ENCORE 1 PV MAX pour relancer le dé immédiatement. Acceptez-vous ?"):
+                    self.result_panel.append_text("\n\n☙ [PACTE] Vous sacrifiez une partie de votre âme (-1 PV MAX).")
+                    self.result_panel.append_text("Le coffre se referme dans un bruit visqueux... Relancez le dé ! ☙")
+                    # On laisse le bouton de lancer actif pour qu'il rejoue !
             return
             
         item = self._build_single_item(tier_data)
         if item:
-            if item.tier in ["Rare", "Very Rare", "Legendary"]:
-                audio_player.play("jackpot")
-            else:
-                audio_player.play("win")
             item_pc = (item.price_po * 10000) + (item.price_pa * 100) + item.price_pc
             self._update_bankroll_display(item_pc)
             self.result_panel.set_banner(item.tier)
@@ -401,7 +406,6 @@ class LootCasinoApp(tk.Tk):
 
         if 1 <= roll <= 50:
             self.current_items.clear()
-            audio_player.play("loose")
             self.result_panel.set_banner("Vide") 
             self.result_panel.append_text("X_X PERTE TOTALE : Le coffre se referme... tout a disparu.")
             self._update_bankroll_display(-self.session_total_pc) 
@@ -604,7 +608,6 @@ class LootCasinoApp(tk.Tk):
         with open(os.path.join(log_dir, filename), "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
             
-        messagebox.showinfo("Sauvegarde", f"Tirage sauvegardé dans {filename}")
         self.build_start_screen()
 
     def clear_window(self):
