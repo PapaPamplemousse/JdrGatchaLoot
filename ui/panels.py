@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import os 
+import sys
 
 class InputPanel(tk.Frame):
     def __init__(self, parent, on_launch_cb, on_jackpot_cb): # Ajout du callback jackpot
@@ -15,7 +16,13 @@ class InputPanel(tk.Frame):
         self.croupier_space.pack(fill=tk.X, pady=(0, 20)) 
 
         # --- CHARGEMENT DE L'IMAGE FIXE (PNG) ---
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # self.img_path = os.path.join(base_dir, "assets", "croupier.png")
+        if getattr(sys, 'frozen', False):
+            base_dir = sys._MEIPASS
+        else:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            
         self.img_path = os.path.join(base_dir, "assets", "croupier.png")
 
         try:

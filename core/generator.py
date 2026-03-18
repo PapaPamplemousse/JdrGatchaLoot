@@ -1,10 +1,21 @@
 import json
 import os
 from .models import LootItem
+import sys
 
 # Chemin relatif vers le dossier data
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# DATA_DIR = os.path.join(BASE_DIR, "data")
+def get_resource_path():
+    """Obtient le dossier absolu, compatible avec PyInstaller."""
+    if getattr(sys, 'frozen', False):
+        # Si on est dans un exécutable compilé
+        return sys._MEIPASS
+    # Si on est en script normal
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+DATA_DIR = os.path.join(get_resource_path(), "data")
+
 
 def load_json(filename):
     filepath = os.path.join(DATA_DIR, filename)

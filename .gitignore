@@ -7,6 +7,11 @@ __pycache__/
 log/
 loot_export.json
 
+# Fichiers générés par PyInstaller
+build/
+dist/
+*.spec
+
 # Environnements virtuels
 venv/
 env/
