@@ -1,0 +1,8 @@
+[
+    {"min": 1, "max": 1, "name": "Vide", "base_affixes": 0, "has_unique_effect": false},
+    {"min": 2, "max": 8, "name": "Common", "base_affixes": 0, "has_unique_effect": false},
+    {"min": 9, "max": 14, "name": "Uncommon", "base_affixes": 1, "has_unique_effect": false},
+    {"min": 15, "max": 17, "name": "Rare", "base_affixes": 2, "has_unique_effect": true},
+    {"min": 18, "max": 19, "name": "Very Rare", "base_affixes": 3, "has_unique_effect": true},
+    {"min": 20, "max": 20, "name": "Legendary", "base_affixes": 3, "has_unique_effect": true}
+]

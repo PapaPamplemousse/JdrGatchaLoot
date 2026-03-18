@@ -1,0 +1,31 @@
+{
+    "colere_de_l_ours": {
+        "name": "Colère de l'Ours",
+        "bonuses": {
+            "2": "Stats : +5 Force",
+            "3": "Effet : Cri de guerre (Étourdit les ennemis proches au premier tour)",
+            "4": "Stats : +20 Vitalité, Effet : Immunité aux renversements"
+        }
+    },
+    "ombres_furtives": {
+        "name": "Ombres Furtives",
+        "bonuses": {
+            "2": "Stats : +10 Esquive",
+            "3": "Effet : Disparition (Permet de devenir invisible après avoir tué une cible)"
+        }
+    },
+    "garde_du_roi": {
+        "name": "Garde du Roi",
+        "bonuses": {
+            "2": "Stats : +15 Armure",
+            "3": "Effet : Garde du corps (Prend 50% des dégâts destinés à un allié adjacent)"
+        }
+    },
+    "flamme_dragon": {
+        "name": "Flamme du Dragon",
+        "bonuses": {
+            "2": "Stats : +10 Dégâts Magiques",
+            "3": "Effet : Aura incandescente (Inflige 5 dégâts de feu par tour aux ennemis au contact)"
+        }
+    }
+}

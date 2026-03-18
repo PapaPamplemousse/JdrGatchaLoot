@@ -1,0 +1,8 @@
+[
+    {"min": 1, "max": 30, "name": "Arme de Mêlée", "id": "melee"},
+    {"min": 31, "max": 45, "name": "Arme à Distance", "id": "ranged"},
+    {"min": 46, "max": 70, "name": "Armure", "id": "armor"},
+    {"min": 71, "max": 80, "name": "Accessoire", "id": "accessory"},
+    {"min": 81, "max": 95, "name": "Parchemin Magique", "id": "scroll"},
+    {"min": 96, "max": 100, "name": "Artefact", "id": "artifact"}
+]

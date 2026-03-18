@@ -1,0 +1,17 @@
+# Fichiers compilés Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dossiers de logs et données générées
+log/
+loot_export.json
+
+# Environnements virtuels
+venv/
+env/
+.env
+
+# Fichiers système (Mac/Windows)
+.DS_Store
+Thumbs.db
