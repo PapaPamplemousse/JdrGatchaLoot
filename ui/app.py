@@ -11,11 +11,13 @@ from .panels import InputPanel, ResultPanel
 from core import generator
 from core.models import LootItem
 
+# --- RAPPEL DE LA COULEUR CASINO ---
+CASINO_BG = "#004d00"
+
 class LootCasinoApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Générateur de Loot Casino $$$")
-        # self.geometry("1000x700") # Fenêtre un peu plus grande pour accueillir la roue
         try:
             self.state('zoomed')
         except tk.TclError:
@@ -25,6 +27,9 @@ class LootCasinoApp(tk.Tk):
         
         self.current_items = []
         self.jackpot_history = []
+
+        # --- NOUVEAU : LA CAGNOTTE DE SESSION ---
+        self.session_total_pc = 0
 
         # --- SYSTÈME DE PITY ---
         pity_cfg = generator.GACHA_DATA.get("pity", {})
@@ -39,74 +44,81 @@ class LootCasinoApp(tk.Tk):
         self.build_start_screen()
 
     def load_recent_history(self):
-        """Récupère les objets des derniers tirages pour le bandeau défilant."""
         if getattr(sys, 'frozen', False):
             log_dir = os.path.join(os.path.dirname(sys.executable), "log")
         else:
             log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")
             
-        if not os.path.exists(log_dir):
-            return "♦ BIENVENUE A LA GRAND ROUE DU LOOT ! FAITES VOTRE PREMIER TIRAGE ! ♦"
-            
-        # Trie les fichiers du plus récent au plus ancien
+        if not os.path.exists(log_dir): return "♦ BIENVENUE A LA GRAND ROUE DU LOOT ! FAITES VOTRE PREMIER TIRAGE ! ♦"
         files = sorted([f for f in os.listdir(log_dir) if f.startswith("tirage_") and f.endswith(".json")], reverse=True)
-        if not files:
-            return "♦ BIENVENUE A LA GRAND ROUE DU LOOT ! FAITES VOTRE PREMIER TIRAGE ! ♦"
+        if not files: return "♦ BIENVENUE A LA GRAND ROUE DU LOOT ! FAITES VOTRE PREMIER TIRAGE ! ♦"
             
         recent_items = []
-        for f in files[:5]: # On fouille dans les 5 derniers tirages
+        for f in files[:5]:
             try:
                 with open(os.path.join(log_dir, f), "r", encoding="utf-8") as file:
                     data = json.load(file)
                     for item in data.get("items", []):
                         if item.get("tier") != "Vide" and item.get("name"):
                             recent_items.append(f"[{item.get('tier').upper()}] {item.get('name')}")
-            except Exception:
-                pass
-                
-        if not recent_items:
-            return "♦ LA BANQUE EST PLEINE ! LANCEZ LES DÉS ! ♦"
-            
-        # On assemble tout avec des séparateurs et on le multiplie pour faire une très longue bande
+            except Exception: pass
+        if not recent_items: return "♦ LA BANQUE EST PLEINE ! LANCEZ LES DÉS ! ♦"
         history_str = "   ✦   ".join(recent_items)
         return f"   ✦   {history_str}   ✦   " * 10
 
-    # def build_start_screen(self):
-    #     self.clear_window()
-    #     frame = tk.Frame(self, bg="#222")
-    #     frame.pack(expand=True)
-        
-    #     tk.Label(frame, text="♦ LOOT CASINO ♦", font=("Arial", 32, "bold"), fg="#FFC107", bg="#222").pack(pady=20)
-    #     tk.Button(frame, text="NOUVEAU TIRAGE", font=("Arial", 16, "bold"), bg="#4CAF50", fg="white", 
-    #               padx=20, pady=10, command=self.build_main_screen).pack()
+    def get_combinations_count(self):
+        """Calcule mathématiquement le nombre de combinaisons uniques possibles."""
+        try:
+            nb_bases = len(generator.BASE_ITEMS)
+            nb_affixes = len(generator.AFFIXES)
+            nb_uniques = len(generator.UNIQUE_EFFECTS)
+            
+            # Calcul combinatoire : 
+            # Objets sans affixe + avec 1 affixe + avec 2 affixes + avec 3 affixes
+            combos_affixes = (
+                1 + 
+                nb_affixes + 
+                (nb_affixes * (nb_affixes - 1) // 2) + 
+                (nb_affixes * (nb_affixes - 1) * (nb_affixes - 2) // 6)
+            )
+            
+            # Base * Combinaisons d'affixes * (Avec ou sans effet unique)
+            total_equip = nb_bases * combos_affixes * (1 + nb_uniques)
+            
+            # On ajoute les parchemins
+            nb_scrolls = len(generator.SCROLLS.get("spells", [])) * len(generator.SCROLLS.get("rarities", []))
+            
+            total = total_equip + nb_scrolls
+            
+            # Formate le nombre avec des espaces pour la lisibilité (ex: 1 250 430)
+            return f"{total:,}".replace(",", " ")
+        except Exception:
+            return "des millions de"
+
     def build_start_screen(self):
         self.clear_window()
-        
-        # Un cadre principal très sombre pour faire ressortir les couleurs
         self.start_frame = tk.Frame(self, bg="#111")
         self.start_frame.pack(expand=True, fill=tk.BOTH)
         
-        # --- 1. LE BANDEAU DÉFILANT (AÉROPORT / CASINO) ---
-        # Fond vert sombre, bordure vert fluo
+        # --- 1. LE BANDEAU DÉFILANT ---
         self.marquee_canvas = tk.Canvas(self.start_frame, bg="#002200", height=60, highlightthickness=3, highlightbackground="#00FF00")
         self.marquee_canvas.pack(fill=tk.X, pady=(0, 40))
-        
         history_text = self.load_recent_history()
-        
-        # Le texte écrit en Jaune fluo avec une police de type terminal
-        self.marquee_text_id = self.marquee_canvas.create_text(
-            1500, 32, text=history_text, 
-            font=("Consolas", 18, "bold"), fill="#FFFF00", anchor="w"
-        )
-        self.marquee_x_pos = 1500 # Position de départ à l'extérieur de l'écran
+        self.marquee_text_id = self.marquee_canvas.create_text(1500, 32, text=history_text, font=("Consolas", 18, "bold"), fill="#FFFF00", anchor="w")
+        self.marquee_x_pos = 1500 
         self._animate_marquee()
 
-        # --- 2. TITRE CLIGNOTANT FAÇON NÉON ---
+        # --- 2. TITRE PRINCIPAL --
         self.title_label = tk.Label(self.start_frame, text="$$$ GRAND ROUE DU LOOT $$$", font=("Impact", 48, "bold"), bg="#111", fg="#FFD700")
         self.title_label.pack(pady=(40, 20))
         self._blink_title()
 
-        # --- 3. GROS BOUTON D'ENTRÉE ---
+        # --- 3. AFFICHAGE DES COMBINAISONS ---
+        combo_count = self.get_combinations_count()
+        self.combo_label = tk.Label(self.start_frame, text=f"♠♡♢♣ Plus de {combo_count} combinaisons d'objets uniques ! ♣♢♡♠", 
+                                    font=("Arial", 18, "bold"), bg="#111", fg="#00FFFF")
+        self.combo_label.pack(pady=(0, 30))
+
         self.btn_play = tk.Button(self.start_frame, text=" ENTRER DANS LE CASINO ", font=("Arial", 22, "bold"), 
                                   bg="#E53935", fg="white", activebackground="#FFEB3B", activeforeground="red", 
                                   relief=tk.RAISED, bd=8, padx=40, pady=20, command=self.build_main_screen)
@@ -120,29 +132,37 @@ class LootCasinoApp(tk.Tk):
         self.left_frame = tk.Frame(self, bg="#222")
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=20)
         
-        self.right_frame = tk.Frame(self, bg="#333", width=300)
+        # --- APPLICATION DU TAPIS VERT CASINO SUR LE PANNEAU DROIT ---
+        self.right_frame = tk.Frame(self, bg=CASINO_BG, width=300)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # --- PARTIE GAUCHE ---
         self.wheel = CasinoWheel(self.left_frame, size=600)
         self.wheel.pack(pady=10)
         
         self.result_panel = ResultPanel(self.left_frame)
         self.result_panel.pack(fill=tk.BOTH, expand=True)
 
-        # --- PARTIE DROITE ---
+        # --- NOUVEAU : LA CAGNOTTE LED (Bankroll) ---
+        self.bankroll_frame = tk.Frame(self.right_frame, bg="#000", bd=5, relief=tk.SUNKEN)
+        self.bankroll_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=(10, 0))
+        tk.Label(self.bankroll_frame, text="TOTAL DES GAINS", fg="#888", bg="#000", font=("Arial", 10, "bold")).pack(pady=(5,0))
+        
+        # LED Rouge vif
+        self.lbl_bankroll = tk.Label(self.bankroll_frame, text="0 PO", fg="#FF0000", bg="#000", font=("Courier", 24, "bold"))
+        self.lbl_bankroll.pack(pady=(0, 5))
+        self._update_bankroll_display(0) # Formate l'affichage initial
+
+        # --- BOUTON TERMINER ---
         self.btn_finish = tk.Button(self.right_frame, text="> TERMINER LE TIRAGE <", bg="#2196F3", fg="white", 
                                     font=("Arial", 12, "bold"), command=self.save_and_reset)
         self.btn_finish.pack(side=tk.BOTTOM, pady=20, padx=10, fill=tk.X)
 
-        # --- NOUVEAU : LA JAUGE DE PITY ---
-        self.pity_frame = tk.Frame(self.right_frame, bg="#333")
+        self.pity_frame = tk.Frame(self.right_frame, bg=CASINO_BG)
         self.pity_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 20))
         
-        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.pity_max}", bg="#333", fg="white", font=("Arial", 12, "bold"))
+        self.pity_label = tk.Label(self.pity_frame, text=f"PITIÉ : {self.pity_counter} / {self.pity_max}", bg=CASINO_BG, fg="white", font=("Arial", 12, "bold"))
         self.pity_label.pack()
         
-        # Jauge avec un fond gris sombre et une fine bordure pour bien la voir même vide
         self.pity_canvas = tk.Canvas(self.pity_frame, height=20, bg="#222", highlightthickness=1, highlightbackground="#555")
         self.pity_canvas.pack(fill=tk.X, pady=5)
         
@@ -151,31 +171,41 @@ class LootCasinoApp(tk.Tk):
         self.update() 
         self.update_pity_bar()
 
+    def _update_bankroll_display(self, additional_pc):
+        """Met à jour le compteur de gains de la session."""
+        self.session_total_pc += additional_pc
+        
+        # Le fun du jackpot : si on perd tout, ça peut baisser en dessous de zéro !
+        display_pc = max(0, self.session_total_pc)
+        
+        po = display_pc // 10000
+        pa = (display_pc % 10000) // 100
+        pc = display_pc % 100
+        
+        if po > 0: display = f"{po} PO {pa} PA"
+        elif pa > 0: display = f"{pa} PA {pc} PC"
+        else: display = f"{pc} PC"
+            
+        self.lbl_bankroll.config(text=display)
+
     def update_pity_bar(self):
-        """Dessine et colorie la barre de Pity."""
         self.pity_canvas.delete("all")
         width = self.pity_canvas.winfo_width()
-        if width <= 1: width = 600 # Sécurité si la fenêtre n'est pas encore dessinée
-        
+        if width <= 1: width = 600
         fill_width = (self.pity_counter / self.pity_max) * width
-        
-        # Couleur : Blanc si < 5, Violet si = 5
         color = "#9C27B0" if self.pity_counter >= self.pity_max else "white"
-        
         self.pity_canvas.create_rectangle(0, 0, fill_width, 25, fill=color, outline="")
         self.pity_label.config(text=f"PITIÉ (Légendaire Garanti) : {self.pity_counter} / {self.pity_max}")
-    
 
     def handle_launch(self, rolls):
         tier_val = rolls["tier"]
-        original_roll = rolls["tier"] # On garde le vrai jet en mémoire pour vérifier le seuil
+        original_roll = rolls["tier"]
         is_pity_pull = False
 
-        # --- 1. VÉRIFICATION DE LA PITY ---
         if self.pity_counter >= self.pity_max:
-            tier_val = 20 # On force le jet à 20 (Légendaire !)
+            tier_val = 20
             self.pity_counter = 0
-            generator.save_gacha_pity(self.pity_counter) # Sauvegarde la remise à zéro
+            generator.save_gacha_pity(self.pity_counter)
             is_pity_pull = True
 
         tier_data = generator.determine_tier(tier_val)
@@ -184,19 +214,16 @@ class LootCasinoApp(tk.Tk):
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             return
 
-        # --- 2. MISE À JOUR DE LA PITY, DU CASHBACK ET SAUVEGARDE ---
         if not is_pity_pull:
             if tier_data["name"] == "Legendary":
-                self.pity_counter = 0 # Reset organique
+                self.pity_counter = 0 
                 generator.save_gacha_pity(self.pity_counter)
             
-            # --- NOUVEAU : LOGIQUE DU CASHBACK D'ÂME ---
             elif tier_data["name"] == "Common":
-                self.soul_fragments += 1 # Gagne 1 fragment !
+                self.soul_fragments += 1
                 generator.save_gacha_fragments(self.soul_fragments)
-                self.input_panel.update_soul_fragments(self.soul_fragments) # Met à jour l'UI
+                self.input_panel.update_soul_fragments(self.soul_fragments)
 
-                # On vérifie aussi la Pity classique si le jet est faible
                 if original_roll <= self.pity_threshold:
                     self.pity_counter += 1
                     generator.save_gacha_pity(self.pity_counter)
@@ -207,69 +234,52 @@ class LootCasinoApp(tk.Tk):
                 
         self.update_pity_bar()
 
-        # --- 3. MÉCANIQUE DE FAKE-OUT (Ascenseur émotionnel) ---
         is_fake_out = False
         fake_out_target = None
         
-        # 5% de chance de fake-out sur un jet non-légendaire, non-vide et non-pity
         if tier_data["name"] not in ["Legendary", "Vide"] and not is_pity_pull:
             if random.randint(1, 100) <= 5: 
                 is_fake_out = True
-                fake_out_target = generator.determine_tier(20) # Devient Légendaire !
+                fake_out_target = generator.determine_tier(20)
 
-        # --- LANCEMENT DE LA ROUE ---
         if is_fake_out:
-            # On tourne vers le "faux" tier, puis on déclenche l'animation de rupture
             self.wheel.spin_to_tier(tier_data["name"], lambda: self.trigger_fake_out(fake_out_target))
         else:
-            # Comportement normal
             self.wheel.spin_to_tier(tier_data["name"], lambda: self.generate_and_display(tier_data))
 
     def trigger_fake_out(self, real_tier_data):
-        """Animation textuelle de rupture pour l'effet Fake-Out."""
         self.result_panel.clear()
+        self.result_panel.set_banner("Vide") # On éteint le bandeau pour le suspense
         self.result_panel.text_area.config(state=tk.NORMAL, bg="white", fg="black")
         self.result_panel.text_area.insert(tk.END, "\n\n... Attente de la matière ...\n")
         self.update()
-        
-        # Effet visuel : l'écran devient noir et le texte rouge sang
         self.after(400, lambda: self._fake_out_step_2(real_tier_data))
 
     def _fake_out_step_2(self, real_tier_data):
         self.result_panel.text_area.config(bg="#1E1E1E", fg="#FF0000")
         self.result_panel.text_area.insert(tk.END, "\n⚠ ANOMALIE DÉTECTÉE ⚠\nLA MATIÈRE SE FRAGMENTE !!\n")
         self.update()
-        
-        # Puisque le fake-out donne un légendaire, on remet la Pity à 0
         self.pity_counter = 0
         generator.save_gacha_pity(self.pity_counter)
         self.update_pity_bar()
-
-        # On affiche le vrai loot après 1 seconde de suspense
         self.after(1200, lambda: self._finish_fake_out(real_tier_data))
 
     def _finish_fake_out(self, real_tier_data):
-        self.result_panel.text_area.config(bg="#1E1E1E", fg="#00FF00") # Retour au vert Matrix
+        self.result_panel.text_area.config(bg="#1E1E1E", fg="#00FF00")
         self.generate_and_display(real_tier_data)
 
-
     def _build_single_item(self, tier_data):
-        """Génère mécaniquement un objet complet basé sur un tier, sans affichage."""
-        if tier_data["name"] == "Vide":
-            return None
-            
+        if tier_data["name"] == "Vide": return None
         item = LootItem()
         item.tier = tier_data["name"]
         
         min_type, max_type = generator.get_bounds(generator.ITEM_TYPES)
-        type_roll = random.randint(min_type, max_type)
-        type_data = generator.determine_item_type(type_roll)
+        type_data = generator.determine_item_type(random.randint(min_type, max_type))
         item.item_type = type_data["name"]
         
         if type_data["id"] == "scroll":
             min_scroll, max_scroll = generator.get_bounds(generator.SCROLLS.get("rarities", []))
-            scroll_roll = random.randint(min_scroll, max_scroll)
-            rar_data = generator.determine_scroll_rarity(scroll_roll)
+            rar_data = generator.determine_scroll_rarity(random.randint(min_scroll, max_scroll))
             if rar_data:
                 valid_spells = [s for s in generator.SCROLLS.get("spells", []) if s.get("rarity_id") == rar_data["id"]]
                 if valid_spells:
@@ -279,8 +289,7 @@ class LootCasinoApp(tk.Tk):
                         item.description = spell_data["description"]
         else:
             valid_bases = [b for b in generator.BASE_ITEMS if b.get("type_id") == type_data["id"]]
-            if not valid_bases: # Sécurité anti-crash si le JSON est vide pour ce type
-                return None
+            if not valid_bases: return None
                 
             min_base, max_base = generator.get_bounds(valid_bases)
             base_data = generator.determine_base_item(type_data["id"], random.randint(min_base, max_base))
@@ -326,10 +335,10 @@ class LootCasinoApp(tk.Tk):
         
         return item
 
-
     def generate_and_display(self, tier_data):
         if tier_data["name"] == "Vide":
             self.result_panel.clear()
+            self.result_panel.set_banner("Vide")
             if random.randint(1, 100) <= 68:
                 mimic_art = (
                     "      _____\n"
@@ -350,6 +359,9 @@ class LootCasinoApp(tk.Tk):
             
         item = self._build_single_item(tier_data)
         if item:
+            item_pc = (item.price_po * 10000) + (item.price_pa * 100) + item.price_pc
+            self._update_bankroll_display(item_pc)
+            self.result_panel.set_banner(item.tier)
             self.current_items.append(item)
             self.result_panel.display_item(item)
             self.after(500, self.ask_jackpot)
@@ -377,22 +389,23 @@ class LootCasinoApp(tk.Tk):
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             return
             
-        # On travaille toujours sur le dernier item généré
         item = self.current_items[-1]
 
         if 1 <= roll <= 50:
             self.current_items.clear()
+            self.result_panel.set_banner("Vide") # Affiche "PERDU" sur le bandeau
             self.result_panel.append_text("X_X PERTE TOTALE : Le coffre se referme... tout a disparu.")
+            self._update_bankroll_display(-self.session_total_pc) 
+            
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             
         elif 51 <= roll <= 70:
             self.result_panel.append_text("--- RIEN : Le vent souffle, rien ne se passe.")
             self.result_panel.append_text("\n> Fin du Jackpot. Vous conservez votre butin actuel.")
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
-
             
         elif 71 <= roll <= 85:
-            self.result_panel.append_text("[+] SECOND ITEM : Gagné ! (Remplissez les champs et relancez pour générer le 2nd item)")
+            self.result_panel.append_text("\n[+] SECOND ITEM : Gagné ! (Remplissez les champs et relancez pour générer le 2nd item)")
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             
         elif 86 <= roll <= 95:
@@ -403,8 +416,9 @@ class LootCasinoApp(tk.Tk):
             
         elif roll >= 96:
             self._upgrade_item(item, to_legendary=True)
+            self.result_panel.set_banner("Legendary") # Force l'affichage légendaire
             self.result_panel.append_text("*** JACKPOT ABSOLU ! L'item devient Légendaire !")
-            self.after(1000, self.ask_jackpot) 
+            self.after(1000, self.ask_jackpot)
 
     def _upgrade_item(self, item, to_legendary=False):
         """Améliore mécaniquement l'objet (Stats, Affixes, Prix, Effet Unique)."""
@@ -464,8 +478,7 @@ class LootCasinoApp(tk.Tk):
             item.set_price_from_copper(int(total_copper * 3.0))
 
     def handle_multi_pull_soul(self, count, tier_garanti=None):
-        """Déduit les fragments et génère les items d'un coup."""
-        # 1. CONSOMMATION ET SAUVEGARDE DES ÂMES
+        """Déduit les fragments, génère les items, calcule la cagnotte et trouve le meilleur loot."""
         self.soul_fragments -= count
         generator.save_gacha_fragments(self.soul_fragments)
         self.input_panel.update_soul_fragments(self.soul_fragments)
@@ -474,10 +487,16 @@ class LootCasinoApp(tk.Tk):
         self.input_panel.hide_jackpot()
         self.result_panel.clear()
         
-        # 2. GÉNÉRATION DE LA LISTE
         multi_items = []
+        
+        # --- NOUVEAU : Variables pour la Bankroll et le Bandeau ---
+        total_multi_pc = 0
+        tiers_order = ["Vide", "Common", "Uncommon", "Rare", "Very Rare", "Legendary"]
+        best_tier_idx = -1
+        best_tier_name = "Vide"
+        # ----------------------------------------------------------
+
         for i in range(count):
-            # Application de la garantie sur le TOUT DERNIER jet (ex: le 10ème)
             if i == count - 1 and tier_garanti:
                 t_data = tier_garanti
             else:
@@ -488,14 +507,35 @@ class LootCasinoApp(tk.Tk):
             if item:
                 multi_items.append(item)
                 self.current_items.append(item)
+                
+                # Ajout de l'argent de cet objet au total de la multi
+                item_pc = (item.price_po * 10000) + (item.price_pa * 100) + item.price_pc
+                total_multi_pc += item_pc
+                
+                # Vérification du meilleur tier pour le bandeau
+                current_idx = tiers_order.index(item.tier) if item.tier in tiers_order else 0
+                if current_idx > best_tier_idx:
+                    best_tier_idx = current_idx
+                    best_tier_name = item.tier
+
             else:
-                # Création d'un "Faux" objet vide pour l'affichage de la liste
                 empty_item = LootItem()
                 empty_item.tier = "Vide"
                 multi_items.append(empty_item)
                 self.current_items.append(empty_item)
                 
-        # 3. AFFICHAGE GROUPÉ
+                # Si le meilleur tier est toujours indéfini, on met Vide
+                if best_tier_idx == -1:
+                    best_tier_idx = 0
+                    best_tier_name = "Vide"
+                
+        # --- NOUVEAU : Mise à jour de l'UI avec les calculs ---
+        if total_multi_pc > 0:
+            self._update_bankroll_display(total_multi_pc) # Monte la cagnotte d'un coup !
+            
+        self.result_panel.set_banner(best_tier_name, is_multi=True) # Affiche le meilleur loot
+        # ------------------------------------------------------
+        
         self.result_panel.display_multi_items(multi_items)
         self.input_panel.btn_lancer.config(state=tk.NORMAL)
         self.update_pity_bar()

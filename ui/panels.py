@@ -1,24 +1,47 @@
 # ui/panels.py
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import PhotoImage
-import os 
+import os
 import sys
+
+# --- COULEUR DU TAPIS DE CASINO ---
+CASINO_BG = "#004d00" 
+CASINO_DARK = "#003300"
+
 
 class InputPanel(tk.Frame):
     def __init__(self, parent, on_launch_cb, on_jackpot_cb, on_multi_soul_cb, initial_fragments): 
-        super().__init__(parent, bg="#333", padx=10, pady=10)
+        super().__init__(parent, bg=CASINO_BG, padx=10, pady=10)
         self.on_launch = on_launch_cb
         self.on_jackpot = on_jackpot_cb
         self.on_multi_soul = on_multi_soul_cb
         self.entries = {}
         self.blink_job = None
         
-        # --- L'ESPACE DU CROUPIER ---
-        self.croupier_space = tk.Frame(self, bg="#333", height=200) 
-        self.croupier_space.pack(fill=tk.X, pady=(0, 20)) 
+        # --- 1. SÉCURISATION DES CONTRÔLES (Ancrés en BAS) ---
+        # En attachant tout avec side=tk.BOTTOM, on s'assure qu'ils ne disparaîtront jamais
+        self.multi_container = tk.Frame(self, bg=CASINO_BG)
+        self.multi_container.pack(side=tk.BOTTOM, fill=tk.X)
 
-        # Chemins des images
+        self.jackpot_container = tk.Frame(self, bg=CASINO_BG)
+        self.jackpot_container.pack(side=tk.BOTTOM, fill=tk.X)
+
+        self.btn_lancer = tk.Button(self, text="LANCER LE TIRAGE", bg="#FF5722", fg="white", font=("Arial", 12, "bold"), command=self.submit)
+        self.btn_lancer.pack(side=tk.BOTTOM, pady=10, fill=tk.X)
+
+        # Zone de saisie manuelle (remplace l'ancienne fonction add_input)
+        self.input_frame = tk.Frame(self, bg=CASINO_BG)
+        self.input_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
+        tk.Label(self.input_frame, text="Résultat du D20:", fg="#CCC", bg=CASINO_BG, width=18, anchor="w").pack(side=tk.LEFT)
+        self.entries["tier"] = tk.Entry(self.input_frame, bg=CASINO_DARK, fg="white", insertbackground="white")
+        self.entries["tier"].pack(side=tk.RIGHT, expand=True, fill=tk.X)
+
+        tk.Label(self, text="♦ RÉSULTATS DU DÉ ♦", fg="white", bg=CASINO_BG, font=("Arial", 14, "bold")).pack(side=tk.BOTTOM, pady=10)
+
+        # --- 2. L'ESPACE DU CROUPIER (Ancré en HAUT, prend la place restante) ---
+        self.croupier_space = tk.Frame(self, bg=CASINO_BG) 
+        self.croupier_space.pack(side=tk.TOP, fill=tk.BOTH, expand=True) 
+
         if getattr(sys, 'frozen', False):
             base_dir = sys._MEIPASS
         else:
@@ -27,71 +50,46 @@ class InputPanel(tk.Frame):
         self.img_path = os.path.join(base_dir, "assets", "croupier.png")
         self.frag_path = os.path.join(base_dir, "assets", "soul_fragment.png")
 
-        # Chargement du croupier
         try:
-            self.croupier_img = tk.PhotoImage(file=self.img_path)
-            self.lbl_croupier = tk.Label(self.croupier_space, image=self.croupier_img, bg="#333", bd=0)
+            # On réduit l'image du croupier d'un tiers pour sauver de la place
+            self.croupier_img = tk.PhotoImage(file=self.img_path).zoom(3).subsample(4)
+            self.lbl_croupier = tk.Label(self.croupier_space, image=self.croupier_img, bg=CASINO_BG, bd=0)
             self.lbl_croupier.pack(expand=True)
         except tk.TclError:
-            self.lbl_croupier = tk.Label(self.croupier_space, text="[ Croupier ]", bg="#222", fg="#777")
+            self.lbl_croupier = tk.Label(self.croupier_space, text="[ Croupier ]", bg=CASINO_DARK, fg="#777")
             self.lbl_croupier.pack(expand=True, fill=tk.BOTH)
 
-        # --- NOUVEAU : SUPERPOSITION DES FRAGMENTS D'ÂME ---
-        # On crée un petit cadre transparent qui va "flotter" sur le Croupier
-        self.soul_overlay = tk.Frame(self.croupier_space, bg="#333")
-        # On le place en haut à droite (relx=0.98 signifie 98% de la largeur)
+        # --- SUPERPOSITION DES FRAGMENTS D'ÂME ---
+        self.soul_overlay = tk.Frame(self.croupier_space, bg=CASINO_BG)
         self.soul_overlay.place(relx=0.98, rely=0.05, anchor="ne")
 
-        self.lbl_frag_value = tk.Label(self.soul_overlay, text=f"x{initial_fragments} ", fg="#9C27B0", bg="#333", font=("Arial", 16, "bold"))
+        self.lbl_frag_value = tk.Label(self.soul_overlay, text=f"x{initial_fragments} ", fg="#E040FB", bg=CASINO_BG, font=("Arial", 16, "bold"))
         self.lbl_frag_value.pack(side=tk.LEFT)
 
         try:
-            # .subsample(2, 2) divise la taille de l'image par 2. Met (3, 3) si encore trop gros !
-            self.frag_img = tk.PhotoImage(file=self.frag_path).subsample(2, 2)
-            self.lbl_frag_icon = tk.Label(self.soul_overlay, image=self.frag_img, bg="#333", bd=0)
+            self.frag_img = tk.PhotoImage(file=self.frag_path).subsample(3, 3) # Encore plus petit pour faire propre
+            self.lbl_frag_icon = tk.Label(self.soul_overlay, image=self.frag_img, bg=CASINO_BG, bd=0)
             self.lbl_frag_icon.pack(side=tk.RIGHT)
         except tk.TclError:
-            tk.Label(self.soul_overlay, text="[ÂME]", fg="#9C27B0", bg="#333").pack(side=tk.RIGHT)
+            tk.Label(self.soul_overlay, text="[ÂME]", fg="#E040FB", bg=CASINO_BG).pack(side=tk.RIGHT)
 
-        # --- LE RESTE DE L'INTERFACE ---
-        tk.Label(self, text="♦ RÉSULTATS DU DÉ ♦", fg="white", bg="#333", font=("Arial", 14, "bold")).pack(pady=10)
-
-        self.add_input("Résultat du D20:", "tier")
-
-        self.btn_lancer = tk.Button(self, text="LANCER LE TIRAGE", bg="#FF5722", fg="white", font=("Arial", 12, "bold"), command=self.submit)
-        self.btn_lancer.pack(pady=10, fill=tk.X)
-
-        # --- CADRES SÉPARÉS POUR SÉCURISER L'AFFICHAGE ---
-        self.jackpot_container = tk.Frame(self, bg="#333")
-        self.jackpot_container.pack(fill=tk.X)
-        
-        self.multi_container = tk.Frame(self, bg="#333")
-        self.multi_container.pack(fill=tk.X)
-
-        # BOUTON JACKPOT (Toujours affiché, mais grisé par défaut)
+        # --- 3. CONFIGURATION DES BOUTONS DE JEU ---
         self.btn_jackpot = tk.Button(self.jackpot_container, text="★★★ JACKPOT ★★★", font=("Impact", 16, "bold"), relief=tk.RAISED, borderwidth=5, command=self.trigger_jackpot)
         self.btn_jackpot.pack(pady=5, fill=tk.X)
-        self.btn_jackpot.config(state=tk.DISABLED, bg="#555", fg="#888") 
+        self.btn_jackpot.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666") 
         
-        # BOUTONS MULTI (Toujours affichés, couleurs gérées dynamiquement)
+        # ATTENTION : side=tk.TOP à l'intérieur de leur propre conteneur pour respecter l'ordre d'affichage
         self.btn_multi_x5 = tk.Button(self.multi_container, text="♦ TIRAGE MULTI x5 ♦", font=("Arial", 12, "bold"), command=lambda: self.trigger_multi_soul(5))
-        self.btn_multi_x5.pack(pady=5, fill=tk.X)
+        self.btn_multi_x5.pack(side=tk.TOP, pady=5, fill=tk.X)
 
         self.btn_multi_x10 = tk.Button(self.multi_container, text="♦ TIRAGE x10 (Rare Garanti) ♦", font=("Arial", 12, "bold"), borderwidth=3, relief=tk.RIDGE, command=lambda: self.trigger_multi_soul(10))
-        self.btn_multi_x10.pack(pady=5, fill=tk.X)
+        self.btn_multi_x10.pack(side=tk.TOP, pady=5, fill=tk.X)
 
-        # Initialisation
         self.update_soul_fragments(initial_fragments)
         self.entries["tier"].bind("<Return>", lambda event: self.submit())
         self.entries["tier"].focus()
 
-    def add_input(self, label_text, key):
-        frame = tk.Frame(self, bg="#333")
-        frame.pack(fill=tk.X, pady=5)
-        tk.Label(frame, text=label_text, fg="#CCC", bg="#333", width=18, anchor="w").pack(side=tk.LEFT)
-        entry = tk.Entry(frame, bg="#222", fg="white", insertbackground="white")
-        entry.pack(side=tk.RIGHT, expand=True, fill=tk.X)
-        self.entries[key] = entry
+    # NOTE : L'ancienne fonction add_input est supprimée car intégrée directement dans le __init__
 
     def submit(self):
         self.hide_jackpot()
@@ -115,9 +113,7 @@ class InputPanel(tk.Frame):
         if "tier" in self.entries:
             self.entries["tier"].focus()
 
-    # --- LOGIQUE DU JACKPOT ---
     def show_jackpot(self):
-        # On l'active et on lui donne ses vraies couleurs
         self.btn_jackpot.config(state=tk.NORMAL, bg="gold", fg="red")
         self._blink_jackpot()
 
@@ -125,53 +121,89 @@ class InputPanel(tk.Frame):
         if self.blink_job is not None:
             self.after_cancel(self.blink_job)
             self.blink_job = None
-        # On le grise et on le désactive au lieu de le cacher
-        self.btn_jackpot.config(state=tk.DISABLED, bg="#555", fg="#888")
+        self.btn_jackpot.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666")
 
     def trigger_jackpot(self):
         self.hide_jackpot()
         self.on_jackpot()
 
     def _blink_jackpot(self):
-        # Sécurité : si le bouton a été grisé entre temps, on arrête le clignotement
-        if self.btn_jackpot['state'] == tk.DISABLED:
-            return 
-            
+        if self.btn_jackpot['state'] == tk.DISABLED: return 
         current_bg = self.btn_jackpot.cget("background")
         new_bg = "white" if current_bg == "gold" else "gold"
         self.btn_jackpot.config(background=new_bg)
         self.blink_job = self.after(300, self._blink_jackpot)
 
-    # --- LOGIQUE DES FRAGMENTS ET MULTI ---
     def update_soul_fragments(self, fragment_count):
         self.lbl_frag_value.config(text=f"x{fragment_count} ")
-        
-        # Gestion du Tirage x5
         if fragment_count >= 5:
             self.btn_multi_x5.config(state=tk.NORMAL, bg="#9C27B0", fg="white")
         else:
-            self.btn_multi_x5.config(state=tk.DISABLED, bg="#555", fg="#888")
+            self.btn_multi_x5.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666")
 
-        # Gestion du Tirage x10
         if fragment_count >= 10:
             self.btn_multi_x10.config(state=tk.NORMAL, bg="#6A1B9A", fg="gold")
         else:
-            self.btn_multi_x10.config(state=tk.DISABLED, bg="#555", fg="#888")
+            self.btn_multi_x10.config(state=tk.DISABLED, bg=CASINO_DARK, fg="#666")
 
     def trigger_multi_soul(self, count):
         self.on_multi_soul(count)
 
+
 class ResultPanel(tk.Frame):
-    # Reste exactement comme avant
     def __init__(self, parent):
         super().__init__(parent, bg="#1E1E1E", padx=10, pady=10)
+        
+        # --- NOUVEAU : LE BANDEAU DE RARETÉ (BIG WIN) ---
+        self.banner_lbl = tk.Label(self, text="♦ FAITES VOS JEUX... ♦", bg="#111", fg="#FFF", font=("Impact", 20, "bold"), pady=5)
+        self.banner_lbl.pack(fill=tk.X, pady=(0, 10))
+        self.banner_blink_job = None
+
         self.text_area = tk.Text(self, bg="#1E1E1E", fg="#00FF00", font=("Consolas", 11), state=tk.DISABLED, wrap=tk.WORD)
         self.text_area.pack(expand=True, fill=tk.BOTH)
 
+
+    def set_banner(self, tier_name, is_multi=False):
+        """Met à jour le bandeau supérieur. Adapte le texte si c'est un multi-tirage."""
+        if self.banner_blink_job:
+            self.after_cancel(self.banner_blink_job)
+            self.banner_blink_job = None
+
+        colors = {
+            "Vide": {"bg": "#000000", "fg": "#FF0000", "text": "☠ PERDU ☠"},
+            "Common": {"bg": "#555555", "fg": "#FFFFFF", "text": "BUTIN COMMUN"},
+            "Uncommon": {"bg": "#1B5E20", "fg": "#FFFFFF", "text": "BUTIN PEU COMMUN"},
+            "Rare": {"bg": "#0D47A1", "fg": "#FFFFFF", "text": "★ RARE ★"},
+            "Very Rare": {"bg": "#4A148C", "fg": "#FFFFFF", "text": "★★ TRÈS RARE ★★"},
+            "Legendary": {"bg": "#FFD700", "fg": "#FF0000", "text": "★★★ LÉGENDAIRE !!! ★★★"}
+        }
+
+        cfg = colors.get(tier_name, {"bg": "#111", "fg": "#FFF", "text": "♦ FAITES VOS JEUX... ♦"})
+        
+        final_text = cfg["text"]
+        if is_multi:
+            if tier_name == "Vide":
+                final_text = "☠ MULTI-POUSSIÈRE (TRAGÉDIE)... ☠"
+            else:
+                final_text = f"♦ MULTI-TIRAGE : TOP {final_text} ♦"
+
+        self.banner_lbl.config(bg=cfg["bg"], fg=cfg["fg"], text=final_text)
+
+        if tier_name == "Legendary":
+            self._blink_banner_legendary()
+
+    def _blink_banner_legendary(self):
+        """Fait clignoter le bandeau légendaire frénétiquement."""
+        current_bg = self.banner_lbl.cget("bg")
+        new_bg = "#FF0000" if current_bg == "#FFD700" else "#FFD700"
+        new_fg = "#FFD700" if current_bg == "#FFD700" else "#FFFFFF"
+        self.banner_lbl.config(bg=new_bg, fg=new_fg)
+        self.banner_blink_job = self.after(150, self._blink_banner_legendary)
+
+    # --- (Le reste des méthodes ResultPanel : display_item, display_multi_items, etc.) ---
     def display_item(self, item):
         self.text_area.config(state=tk.NORMAL)
         self.text_area.delete(1.0, tk.END)
-        
         output = f"===== LOOT GÉNÉRÉ =====\n"
         output += f"Nom    : {item.get_full_name()}\n"
         output += f"Tier   : {item.tier}\n"
@@ -199,41 +231,28 @@ class ResultPanel(tk.Frame):
                 
         output += f"\nDescription :\n{item.description}\n"
         output += "=======================\n"
-        
         self.text_area.insert(tk.END, output)
         self.text_area.config(state=tk.DISABLED)
 
     def display_multi_items(self, items):
-        """Affichage condensé spécialement conçu pour les multi-tirages (façon Gacha)."""
         self.text_area.config(state=tk.NORMAL)
         self.text_area.delete(1.0, tk.END)
-        
         output = f"===== RÉSULTAT DU MULTI-TIRAGE x{len(items)} =====\n\n"
-        
         for i, item in enumerate(items, 1):
             if item.tier == "Vide":
                 output += f"[{i}] ~ LE NÉANT ~\n    -> Rien que de la poussière.\n\n"
                 continue
-                
             tier_str = item.tier.upper()
             name_str = item.get_full_name()
             output += f"[{i}] [{tier_str}] {name_str}\n"
-            
-            # Condense les stats sur une ligne
             stats_str = ", ".join([f"{k}: {v}" for k, v in item.stats.items()])
             if not stats_str: stats_str = "Aucune stat"
-            
             output += f"    -> {item.item_type} | Val: ¤ {item.get_price_string()} | Stats: {stats_str}\n"
-            
-            # Affiche juste le premier effet s'il y en a un pour ne pas surcharger
             if item.effects:
-                first_effect = item.effects[0].split('\n')[0] # Prend juste le titre de l'effet
+                first_effect = item.effects[0].split('\n')[0] 
                 output += f"    -> Effet: {first_effect}\n"
-                
             output += "\n"
-            
         output += "========================================\n"
-        
         self.text_area.insert(tk.END, output)
         self.text_area.config(state=tk.DISABLED)
         
@@ -247,3 +266,4 @@ class ResultPanel(tk.Frame):
         self.text_area.config(state=tk.NORMAL)
         self.text_area.delete(1.0, tk.END)
         self.text_area.config(state=tk.DISABLED)
+        self.set_banner("None") # Reset du bandeau
