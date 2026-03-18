@@ -1,0 +1,8 @@
+{
+    "pity": {
+        "max_pity": 5,
+        "max_roll_to_increment": 5,
+        "current_pity": 5
+    },
+    "soul_fragments": 0
+}

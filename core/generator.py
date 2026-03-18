@@ -62,20 +62,36 @@ def get_bounds(table):
     max_val = max(entry.get("max", 1) for entry in table)
     return min_val, max_val
 
-# --- CHARGEMENT DU FICHIER PITY ---
-PITY_FILE = os.path.join(DATA_DIR, "pity.json")
-try:
-    with open(PITY_FILE, "r", encoding="utf-8") as f:
-        PITY_DATA = json.load(f)
-except FileNotFoundError:
-    # Valeurs par défaut si le fichier n'existe pas encore
-    PITY_DATA = {"max_pity": 5, "max_roll_to_increment": 5, "current_pity": 0}
+# --- CHARGEMENT DU FICHIER DE DONNÉES GACHA ---
+GACHA_FILE = os.path.join(DATA_DIR, "gacha_data.json")
 
-def save_pity(current_pity):
-    """Met à jour le compteur de pitié et sauvegarde dans le JSON."""
-    PITY_DATA["current_pity"] = current_pity
+def load_gacha_data():
+    """Charge les données de Pity et de Fragments."""
     try:
-        with open(PITY_FILE, "w", encoding="utf-8") as f:
-            json.dump(PITY_DATA, f, indent=4)
+        with open(GACHA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)  # <-- LA CORRECTION EST ICI
+    except FileNotFoundError:
+        return {
+            "pity": {"max_pity": 5, "max_roll_to_increment": 5, "current_pity": 0},
+            "soul_fragments": 0
+        }
+# Initialisation des données locales
+GACHA_DATA = load_gacha_data()
+
+def save_gacha_pity(current_pity):
+    """Met à jour et sauvegarde la pitié."""
+    GACHA_DATA["pity"]["current_pity"] = current_pity
+    _save_all_data()
+
+def save_gacha_fragments(fragment_count):
+    """Met à jour et sauvegarde le nombre de fragments."""
+    GACHA_DATA["soul_fragments"] = fragment_count
+    _save_all_data()
+
+def _save_all_data():
+    """Sauvegarde tout le JSON sur le disque."""
+    try:
+        with open(GACHA_FILE, "w", encoding="utf-8") as f:
+            json.dump(GACHA_DATA, f, indent=4)
     except Exception as e:
-        print(f"Erreur lors de la sauvegarde de la pitié : {e}")
+        print(f"Erreur lors de la sauvegarde Gacha : {e}")

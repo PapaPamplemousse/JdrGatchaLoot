@@ -26,9 +26,15 @@ class LootCasinoApp(tk.Tk):
         self.current_items = []
         self.jackpot_history = []
 
-        self.pity_counter = generator.PITY_DATA.get("current_pity", 0)
-        self.pity_max = generator.PITY_DATA.get("max_pity", 5)
-        self.pity_threshold = generator.PITY_DATA.get("max_roll_to_increment", 5)
+        # --- SYSTÈME DE PITY ---
+        pity_cfg = generator.GACHA_DATA.get("pity", {})
+        self.pity_counter = pity_cfg.get("current_pity", 0)
+        self.pity_max = pity_cfg.get("max_pity", 5)
+        self.pity_threshold = pity_cfg.get("max_roll_to_increment", 5)
+
+        # --- SYSTÈME DE FRAGMENTS D'ÂME ---
+        self.soul_fragments = generator.GACHA_DATA.get("soul_fragments", 0)
+        self.frag_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "soul_fragment.png")
         
         self.build_start_screen()
 
@@ -53,7 +59,7 @@ class LootCasinoApp(tk.Tk):
         self.right_frame.pack(side=tk.RIGHT, fill=tk.Y)
         
         # --- PARTIE GAUCHE ---
-        self.wheel = CasinoWheel(self.left_frame, size=400)
+        self.wheel = CasinoWheel(self.left_frame, size=600)
         self.wheel.pack(pady=10)
         
         self.result_panel = ResultPanel(self.left_frame)
@@ -75,9 +81,12 @@ class LootCasinoApp(tk.Tk):
         self.pity_canvas = tk.Canvas(self.pity_frame, height=20, bg="#222", highlightthickness=1, highlightbackground="#555")
         self.pity_canvas.pack(fill=tk.X, pady=5)
         
-        self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click)
+        # self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click)
+        # self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments, self.frag_icon_path)
+        # self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.input_panel = InputPanel(self.right_frame, self.handle_launch, self.handle_jackpot_click, self.handle_multi_pull_soul, self.soul_fragments)
         self.input_panel.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
         self.update() 
         self.update_pity_bar()
 
@@ -94,7 +103,7 @@ class LootCasinoApp(tk.Tk):
         
         self.pity_canvas.create_rectangle(0, 0, fill_width, 25, fill=color, outline="")
         self.pity_label.config(text=f"PITIÉ (Légendaire Garanti) : {self.pity_counter} / {self.pity_max}")
-
+    
 
     def handle_launch(self, rolls):
         tier_val = rolls["tier"]
@@ -105,7 +114,7 @@ class LootCasinoApp(tk.Tk):
         if self.pity_counter >= self.pity_max:
             tier_val = 20 # On force le jet à 20 (Légendaire !)
             self.pity_counter = 0
-            generator.save_pity(self.pity_counter) # Sauvegarde la remise à zéro
+            generator.save_gacha_pity(self.pity_counter) # Sauvegarde la remise à zéro
             is_pity_pull = True
 
         tier_data = generator.determine_tier(tier_val)
@@ -114,14 +123,26 @@ class LootCasinoApp(tk.Tk):
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             return
 
-        # --- 2. MISE À JOUR DU COMPTEUR DE PITY ---
+        # --- 2. MISE À JOUR DE LA PITY, DU CASHBACK ET SAUVEGARDE ---
         if not is_pity_pull:
             if tier_data["name"] == "Legendary":
-                self.pity_counter = 0 # Reset organique si le joueur a de la chance !
-                generator.save_pity(self.pity_counter)
+                self.pity_counter = 0 # Reset organique
+                generator.save_gacha_pity(self.pity_counter)
+            
+            # --- NOUVEAU : LOGIQUE DU CASHBACK D'ÂME ---
+            elif tier_data["name"] == "Common":
+                self.soul_fragments += 1 # Gagne 1 fragment !
+                generator.save_gacha_fragments(self.soul_fragments)
+                self.input_panel.update_soul_fragments(self.soul_fragments) # Met à jour l'UI
+
+                # On vérifie aussi la Pity classique si le jet est faible
+                if original_roll <= self.pity_threshold:
+                    self.pity_counter += 1
+                    generator.save_gacha_pity(self.pity_counter)
+            
             elif original_roll <= self.pity_threshold and tier_data["name"] != "Vide":
-                self.pity_counter += 1 # Incrémente seulement si le jet est <= au seuil (ex: 5)
-                generator.save_pity(self.pity_counter)
+                self.pity_counter += 1
+                generator.save_gacha_pity(self.pity_counter)
                 
         self.update_pity_bar()
 
@@ -160,52 +181,27 @@ class LootCasinoApp(tk.Tk):
         
         # Puisque le fake-out donne un légendaire, on remet la Pity à 0
         self.pity_counter = 0
-        generator.save_pity(self.pity_counter)
+        generator.save_gacha_pity(self.pity_counter)
         self.update_pity_bar()
 
-        # On affiche le vrai loot après 4 seconde de suspense
-        self.after(4800, lambda: self._finish_fake_out(real_tier_data))
+        # On affiche le vrai loot après 1 seconde de suspense
+        self.after(1200, lambda: self._finish_fake_out(real_tier_data))
 
     def _finish_fake_out(self, real_tier_data):
         self.result_panel.text_area.config(bg="#1E1E1E", fg="#00FF00") # Retour au vert Matrix
         self.generate_and_display(real_tier_data)
 
 
-    def generate_and_display(self, tier_data):
-        # 1. GESTION DU COFFRE VIDE
+    def _build_single_item(self, tier_data):
+        """Génère mécaniquement un objet complet basé sur un tier, sans affichage."""
         if tier_data["name"] == "Vide":
-            self.result_panel.clear()
-            
-            # Tirage au sort : 68% de chance (1 à 70)
-            if random.randint(1, 100) <= 68:
-                # CAS DU MIMIC
-                mimic_art = (
-                    "      _____\n"
-                    "     /     \\ \n"
-                    "    | () () |\n"
-                    "     \\  ^  /\n"
-                    "      |||||\n\n"
-                )
-                self.result_panel.append_text("⚠ ATTENTION ! Ce n'est pas de la poussière... ⚠\n\n")
-                self.result_panel.append_text(mimic_art)
-                self.result_panel.append_text("Le coffre révèle des dents acérées et une langue violacée !\n")
-                self.result_panel.append_text("C'EST UN MIMIC ! Il vous attaque ! ")
-            else:
-                # CAS VRAIMENT VIDE
-                self.result_panel.append_text("\_(oo))_/¯ LE COFFRE EST VIDE...\n\n")
-                self.result_panel.append_text("Il n'y a absolument rien ici à part de la poussière.")
-
-            self.input_panel.btn_lancer.config(state=tk.NORMAL)
-            return
+            return None
             
         item = LootItem()
         item.tier = tier_data["name"]
         
-        # 2. JETS DYNAMIQUES POUR LE TYPE D'OBJET
         min_type, max_type = generator.get_bounds(generator.ITEM_TYPES)
         type_roll = random.randint(min_type, max_type)
-
-
         type_data = generator.determine_item_type(type_roll)
         item.item_type = type_data["name"]
         
@@ -216,18 +212,18 @@ class LootCasinoApp(tk.Tk):
             if rar_data:
                 valid_spells = [s for s in generator.SCROLLS.get("spells", []) if s.get("rarity_id") == rar_data["id"]]
                 if valid_spells:
-                    spell_roll = random.randint(1, len(valid_spells))
-                    spell_data = generator.determine_scroll_spell(rar_data["id"], spell_roll)
+                    spell_data = generator.determine_scroll_spell(rar_data["id"], random.randint(1, len(valid_spells)))
                     if spell_data:
                         item.base_name = f"Parchemin de {spell_data['name']} ({rar_data['name']})"
                         item.description = spell_data["description"]
-        else :
-            # Jet dynamique pour l'objet de base (en filtrant par type d'arme/armure d'abord)
+        else:
             valid_bases = [b for b in generator.BASE_ITEMS if b.get("type_id") == type_data["id"]]
+            if not valid_bases: # Sécurité anti-crash si le JSON est vide pour ce type
+                return None
+                
             min_base, max_base = generator.get_bounds(valid_bases)
-            base_roll = random.randint(min_base, max_base)
-
-            base_data = generator.determine_base_item(type_data["id"], base_roll)
+            base_data = generator.determine_base_item(type_data["id"], random.randint(min_base, max_base))
+            
             if base_data:
                 item.base_name = base_data["name"]
                 item.stats = base_data.get("base_stats", {}).copy()
@@ -240,55 +236,62 @@ class LootCasinoApp(tk.Tk):
                         item.set_bonuses = set_info["bonuses"]
                         
                 num_affixes = tier_data.get("base_affixes", 0)
-                if item.tier == "Common":
-                    num_affixes = random.choice([0, 1])
+                if item.tier == "Common": num_affixes = random.choice([0, 1])
                 
-                # Jets dynamiques pour les affixes
                 min_affix, max_affix = generator.get_bounds(generator.AFFIXES)
                 for _ in range(num_affixes):
-                    #r = random.randint(1, 100)
-                    r = random.randint(min_affix, max_affix)
-                    affix = generator.determine_affix(r)
+                    affix = generator.determine_affix(random.randint(min_affix, max_affix))
                     if affix:
                         item.affixes.append(affix)
                         item.merge_stats(affix.get("stats_modifier", {}))
                         if "effect" in affix: item.effects.append(affix["effect"])
-                        if not item.prefix and "prefix" in affix:
-                            item.prefix = affix["prefix"]
-                        elif not item.suffix and "suffix" in affix:
-                            item.suffix = affix["suffix"]
+                        if not item.prefix and "prefix" in affix: item.prefix = affix["prefix"]
+                        elif not item.suffix and "suffix" in affix: item.suffix = affix["suffix"]
 
                 if tier_data.get("has_unique_effect", False):
-                    min_unique, max_unique = generator.get_bounds(generator.UNIQUE_EFFECTS)
-                    unique_roll = random.randint(min_unique, max_unique)
-                    unique_data = generator.get_unique_effect(unique_roll)
+                    min_u, max_u = generator.get_bounds(generator.UNIQUE_EFFECTS)
+                    unique_data = generator.get_unique_effect(random.randint(min_u, max_u))
                     if unique_data:
                         item.effects.append(f"*** UNIQUE : {unique_data['name']} ***\n      {unique_data['description']}")
-                        # On force un préfixe stylé pour que le nom de l'arme en jette
                         item.prefix = "Mythique"
 
-        # 3. CALCUL DU PRIX (En pièces de cuivre : PC)
         base_value_pc = {
-            "Common": random.randint(50, 5000),      # De 50 PC à 50 PA
-            "Uncommon": random.randint(5000, 20000), # De 50 PA à 2 PO
-            "Rare": random.randint(20000, 150000),   # De 2 PO à 15 PO
-            "Very Rare": random.randint(150000, 450000), # De 15 PO à 45 PO
-            "Legendary": random.randint(450000, 1000000) # De 45 PO à 100 PO
+            "Common": random.randint(50, 5000), "Uncommon": random.randint(5000, 20000),
+            "Rare": random.randint(20000, 150000), "Very Rare": random.randint(150000, 450000),
+            "Legendary": random.randint(450000, 1000000)
         }
-        
-        total_pc = base_value_pc.get(item.tier, 0)
-        
-        # Bonus de valeur : +15% par affixe présent sur l'arme
-        bonus_multiplier = 1.0 + (0.15 * len(item.affixes))
-        total_pc = int(total_pc * bonus_multiplier)
-        
+        total_pc = int(base_value_pc.get(item.tier, 0) * (1.0 + (0.15 * len(item.affixes))))
         item.set_price_from_copper(total_pc)
-
-        # 4. AFFICHAGE ET JACKPOT
-        self.current_items.append(item)
-        self.result_panel.display_item(item)
         
-        self.after(500, self.ask_jackpot)
+        return item
+
+
+    def generate_and_display(self, tier_data):
+        if tier_data["name"] == "Vide":
+            self.result_panel.clear()
+            if random.randint(1, 100) <= 68:
+                mimic_art = (
+                    "      _____\n"
+                    "     /     \\ \n"
+                    "    | () () |\n"
+                    "     \\  ^  /\n"
+                    "      |||||\n\n"
+                )
+                self.result_panel.append_text("⚠ ATTENTION ! Ce n'est pas de la poussière... ⚠\n\n")
+                self.result_panel.append_text(mimic_art)
+                self.result_panel.append_text("Le coffre révèle des dents acérées et une langue violacée !\n")
+                self.result_panel.append_text("C'EST UN MIMIC ! Il vous attaque ! ")
+            else:
+                self.result_panel.append_text("¯\_(oo))_/¯ LE COFFRE EST VIDE...\n\n")
+                self.result_panel.append_text("Il n'y a absolument rien ici à part de la poussière.")
+            self.input_panel.btn_lancer.config(state=tk.NORMAL)
+            return
+            
+        item = self._build_single_item(tier_data)
+        if item:
+            self.current_items.append(item)
+            self.result_panel.display_item(item)
+            self.after(500, self.ask_jackpot)
 
     def ask_jackpot(self):
         # --- NOUVEAU : On affiche le gros bouton au lieu du pop-up ---
@@ -304,7 +307,7 @@ class LootCasinoApp(tk.Tk):
 
     def process_jackpot(self, roll):
         self.jackpot_history.append(roll)
-        self.result_panel.append_text(f"\[?] Lancement du Jackpot... ")
+        self.result_panel.append_text(f"[?] Lancement du Jackpot... ")
         # On fait tourner la roue pour le suspense, puis on applique
         self.wheel.spin_to_tier("Common", lambda: self._apply_jackpot_logic(roll)) 
 
@@ -399,6 +402,44 @@ class LootCasinoApp(tk.Tk):
             total_copper = (item.price_po * 10000) + (item.price_pa * 100) + item.price_pc
             item.set_price_from_copper(int(total_copper * 3.0))
 
+    def handle_multi_pull_soul(self, count, tier_garanti=None):
+        """Déduit les fragments et génère les items d'un coup."""
+        # 1. CONSOMMATION ET SAUVEGARDE DES ÂMES
+        self.soul_fragments -= count
+        generator.save_gacha_fragments(self.soul_fragments)
+        self.input_panel.update_soul_fragments(self.soul_fragments)
+        
+        self.input_panel.btn_lancer.config(state=tk.DISABLED)
+        self.input_panel.hide_jackpot()
+        self.result_panel.clear()
+        
+        # 2. GÉNÉRATION DE LA LISTE
+        multi_items = []
+        for i in range(count):
+            # Application de la garantie sur le TOUT DERNIER jet (ex: le 10ème)
+            if i == count - 1 and tier_garanti:
+                t_data = tier_garanti
+            else:
+                t_data = generator.determine_tier(random.randint(1, 20))
+                
+            item = self._build_single_item(t_data)
+            
+            if item:
+                multi_items.append(item)
+                self.current_items.append(item)
+            else:
+                # Création d'un "Faux" objet vide pour l'affichage de la liste
+                empty_item = LootItem()
+                empty_item.tier = "Vide"
+                multi_items.append(empty_item)
+                self.current_items.append(empty_item)
+                
+        # 3. AFFICHAGE GROUPÉ
+        self.result_panel.display_multi_items(multi_items)
+        self.input_panel.btn_lancer.config(state=tk.NORMAL)
+        self.update_pity_bar()
+
+
     def save_and_reset(self):
         # log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "log")
         if getattr(sys, 'frozen', False):
@@ -430,3 +471,4 @@ class LootCasinoApp(tk.Tk):
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
+
