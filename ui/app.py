@@ -10,6 +10,7 @@ from .wheel import CasinoWheel
 from .panels import InputPanel, ResultPanel
 from core import generator
 from core.models import LootItem
+from core.audio import audio_player
 
 # --- RAPPEL DE LA COULEUR CASINO ---
 CASINO_BG = "#004d00"
@@ -242,6 +243,7 @@ class LootCasinoApp(tk.Tk):
                 is_fake_out = True
                 fake_out_target = generator.determine_tier(20)
 
+        
         if is_fake_out:
             self.wheel.spin_to_tier(tier_data["name"], lambda: self.trigger_fake_out(fake_out_target))
         else:
@@ -257,6 +259,7 @@ class LootCasinoApp(tk.Tk):
 
     def _fake_out_step_2(self, real_tier_data):
         self.result_panel.text_area.config(bg="#1E1E1E", fg="#FF0000")
+        audio_player.play("alarm")
         self.result_panel.text_area.insert(tk.END, "\n⚠ ANOMALIE DÉTECTÉE ⚠\nLA MATIÈRE SE FRAGMENTE !!\n")
         self.update()
         self.pity_counter = 0
@@ -337,6 +340,7 @@ class LootCasinoApp(tk.Tk):
 
     def generate_and_display(self, tier_data):
         if tier_data["name"] == "Vide":
+            audio_player.play("loose")
             self.result_panel.clear()
             self.result_panel.set_banner("Vide")
             if random.randint(1, 100) <= 68:
@@ -359,6 +363,10 @@ class LootCasinoApp(tk.Tk):
             
         item = self._build_single_item(tier_data)
         if item:
+            if item.tier in ["Rare", "Very Rare", "Legendary"]:
+                audio_player.play("jackpot")
+            else:
+                audio_player.play("win")
             item_pc = (item.price_po * 10000) + (item.price_pa * 100) + item.price_pc
             self._update_bankroll_display(item_pc)
             self.result_panel.set_banner(item.tier)
@@ -373,8 +381,8 @@ class LootCasinoApp(tk.Tk):
         self.input_panel.btn_lancer.config(state=tk.NORMAL)
 
     def handle_jackpot_click(self):
-        # --- NOUVEAU : Action quand le bouton est cliqué ---
-        self.input_panel.btn_lancer.config(state=tk.DISABLED) # On rebloque le lancer normal
+        self.input_panel.btn_lancer.config(state=tk.DISABLED) 
+        audio_player.play("spin")
         jackpot_roll = random.randint(1, 100)
         self.process_jackpot(jackpot_roll)
 
@@ -393,7 +401,8 @@ class LootCasinoApp(tk.Tk):
 
         if 1 <= roll <= 50:
             self.current_items.clear()
-            self.result_panel.set_banner("Vide") # Affiche "PERDU" sur le bandeau
+            audio_player.play("loose")
+            self.result_panel.set_banner("Vide") 
             self.result_panel.append_text("X_X PERTE TOTALE : Le coffre se referme... tout a disparu.")
             self._update_bankroll_display(-self.session_total_pc) 
             

@@ -62,7 +62,7 @@ class CasinoWheel(tk.Canvas):
         # CHANGEMENT 1 : On passe de 1080 (3 tours) à 360 (1 seul tour bonus)
         #total_rotation_needed = 360 + target_rotation - self.current_rotation
         # Le compromis parfait : 2 tours complets (720 degrés)
-        total_rotation_needed = 720 + target_rotation - self.current_rotation
+        total_rotation_needed = 1080 + target_rotation - self.current_rotation
 
         # CHANGEMENT 2 : On augmente la vitesse initiale de 25 à 45
         self._animate_spin(total_rotation_needed, 45, callback)

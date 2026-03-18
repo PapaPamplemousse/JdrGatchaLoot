@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import sys
-
+from core.audio import audio_player
 # --- COULEUR DU TAPIS DE CASINO ---
 CASINO_BG = "#004d00" 
 CASINO_DARK = "#003300"
@@ -102,7 +102,7 @@ class InputPanel(tk.Frame):
         if not (1 <= tier_val <= 20):
             messagebox.showerror("Erreur", "Le jet doit être compris entre 1 et 20.")
             return
-
+        audio_player.play("spin")
         self.btn_lancer.config(state=tk.DISABLED)
         self.on_launch({"tier": tier_val})
 
