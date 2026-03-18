@@ -42,7 +42,11 @@ class InputPanel(tk.Frame):
         tk.Label(self.banner_frame, text="Bannière :", fg="#FFD700", bg=self.bg_color, width=18, anchor="w", font=("Arial", 10, "bold")).pack(side=tk.LEFT)
         
         self.banner_var = tk.StringVar(value="Standard (0 Âme)")
-        self.banner_menu = tk.OptionMenu(self.banner_frame, self.banner_var, "Standard (0 Âme)", "Armurerie (1 Âme)", "Mystique (2 Âmes)")
+        self.banner_menu = tk.OptionMenu(self.banner_frame, self.banner_var, 
+                                         "Standard (0 Âme)", 
+                                         "Logistique (1 Âme)", 
+                                         "Armurerie (2 Âmes)", 
+                                         "Mystique (5 Âmes)")
         self.banner_menu.config(bg=self.dark_color, fg="white", highlightthickness=0, font=("Arial", 9, "bold"))
         self.banner_menu.pack(side=tk.RIGHT, expand=True, fill=tk.X)
 
