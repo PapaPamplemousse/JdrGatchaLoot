@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 import os
 import json
-import random  # NOUVEAU: Pour automatiser les jets secondaires
+import random  
 from datetime import datetime
 
 from .wheel import CasinoWheel
@@ -50,7 +50,7 @@ class LootCasinoApp(tk.Tk):
         self.result_panel = ResultPanel(self.left_frame)
         self.result_panel.pack(fill=tk.BOTH, expand=True)
         
-        self.btn_finish = tk.Button(self.left_frame, text="💾 TERMINER LE TIRAGE", bg="#2196F3", fg="white", 
+        self.btn_finish = tk.Button(self.left_frame, text="$$$ TERMINER LE TIRAGE $$$", bg="#2196F3", fg="white", 
                                     font=("Arial", 10, "bold"), command=self.save_and_reset)
         self.btn_finish.pack(pady=5, fill=tk.X)
 
@@ -71,22 +71,49 @@ class LootCasinoApp(tk.Tk):
         # 1. GESTION DU COFFRE VIDE
         if tier_data["name"] == "Vide":
             self.result_panel.clear()
-            self.result_panel.append_text("💨 LE COFFRE EST VIDE...\n\nIl n'y a absolument rien ici à part de la poussière.")
+            
+            # Tirage au sort : 70% de chance (1 à 70)
+            if random.randint(1, 100) <= 70:
+                # CAS DU MIMIC
+                mimic_art = (
+                    "      _____\n"
+                    "     /     \\ \n"
+                    "    | () () |\n"
+                    "     \\  ^  /\n"
+                    "      |||||\n\n"
+                )
+                self.result_panel.append_text("⚠ ATTENTION ! Ce n'est pas de la poussière... ⚠\n\n")
+                self.result_panel.append_text(mimic_art)
+                self.result_panel.append_text("Le coffre révèle des dents acérées et une langue violacée !\n")
+                self.result_panel.append_text("C'EST UN MIMIC ! Il vous attaque ! ")
+                # Ici, tu pourrais ajouter un appel à une fonction de combat : self.lancer_combat_mimic()
+            else:
+                # CAS VRAIMENT VIDE
+                self.result_panel.append_text("\_(oo))_/¯ LE COFFRE EST VIDE...\n\n")
+                self.result_panel.append_text("Il n'y a absolument rien ici à part de la poussière.")
+
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
-            return # On s'arrête là, pas de loot, pas de jackpot
+            return
             
         item = LootItem()
         item.tier = tier_data["name"]
         
-        # 2. AUTOMATISATION DES JETS GLOBAUX
-        type_roll = random.randint(1, 100)
-        base_roll = random.randint(1, 100)
-        
+        # # 2. AUTOMATISATION DES JETS GLOBAUX
+        # type_roll = random.randint(1, 100)
+        # base_roll = random.randint(1, 100)
+
+        # 2. JETS DYNAMIQUES POUR LE TYPE D'OBJET
+        min_type, max_type = generator.get_bounds(generator.ITEM_TYPES)
+        type_roll = random.randint(min_type, max_type)
+
+
         type_data = generator.determine_item_type(type_roll)
         item.item_type = type_data["name"]
         
         if type_data["id"] == "scroll":
-            scroll_roll = random.randint(1, 100)
+            min_scroll, max_scroll = generator.get_bounds(generator.SCROLLS.get("rarities", []))
+            scroll_roll = random.randint(min_scroll, max_scroll)
+            #scroll_roll = random.randint(1, 100)
             rar_data = generator.determine_scroll_rarity(scroll_roll)
             if rar_data:
                 valid_spells = [s for s in generator.SCROLLS.get("spells", []) if s.get("rarity_id") == rar_data["id"]]
@@ -96,7 +123,12 @@ class LootCasinoApp(tk.Tk):
                     if spell_data:
                         item.base_name = f"Parchemin de {spell_data['name']} ({rar_data['name']})"
                         item.description = spell_data["description"]
-        else:
+        else :
+            # Jet dynamique pour l'objet de base (en filtrant par type d'arme/armure d'abord)
+            valid_bases = [b for b in generator.BASE_ITEMS if b.get("type_id") == type_data["id"]]
+            min_base, max_base = generator.get_bounds(valid_bases)
+            base_roll = random.randint(min_base, max_base)
+
             base_data = generator.determine_base_item(type_data["id"], base_roll)
             if base_data:
                 item.base_name = base_data["name"]
@@ -112,9 +144,12 @@ class LootCasinoApp(tk.Tk):
                 num_affixes = tier_data.get("base_affixes", 0)
                 if item.tier == "Common":
                     num_affixes = random.choice([0, 1])
-                    
+                
+                # Jets dynamiques pour les affixes
+                min_affix, max_affix = generator.get_bounds(generator.AFFIXES)
                 for _ in range(num_affixes):
-                    r = random.randint(1, 100)
+                    #r = random.randint(1, 100)
+                    r = random.randint(min_affix, max_affix)
                     affix = generator.determine_affix(r)
                     if affix:
                         item.affixes.append(affix)
@@ -126,7 +161,8 @@ class LootCasinoApp(tk.Tk):
                             item.suffix = affix["suffix"]
 
                 if tier_data.get("has_unique_effect", False):
-                    unique_roll = random.randint(1, 100)
+                    min_unique, max_unique = generator.get_bounds(generator.UNIQUE_EFFECTS)
+                    unique_roll = random.randint(min_unique, max_unique)
                     unique_data = generator.get_unique_effect(unique_roll)
                     if unique_data:
                         item.effects.append(f"*** UNIQUE : {unique_data['name']} ***\n      {unique_data['description']}")
@@ -163,7 +199,7 @@ class LootCasinoApp(tk.Tk):
             jackpot_roll = random.randint(1, 100)
             self.process_jackpot(jackpot_roll)
         else:
-            self.result_panel.append_text("\n👉 Tirage terminé. Terminez pour sauvegarder, ou modifiez vos jets pour un autre tirage.")
+            self.result_panel.append_text("\nTirage terminé. Terminez pour sauvegarder, ou modifiez vos jets pour un autre tirage.")
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
 
     def process_jackpot(self, roll):

@@ -42,6 +42,9 @@ class InputPanel(tk.Frame):
         self.btn_lancer = tk.Button(self, text="LANCER LE TIRAGE", bg="#FF5722", fg="white", font=("Arial", 12, "bold"), command=self.submit)
         self.btn_lancer.pack(pady=20, fill=tk.X)
 
+        self.entries["tier"].bind("<Return>", lambda event: self.submit())
+        self.entries["tier"].focus()
+
     def _load_remaining_frames(self):
         """Charge les images du GIF une par une sans bloquer l'interface."""
         self.load_index += 1

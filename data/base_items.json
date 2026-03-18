@@ -49,7 +49,7 @@
     {"min": 95, "max": 96, "type_id": "melee", "name": "Lame du Néant", "base_stats": {"Dégâts": 28, "Poids": 0}, "description": "Elle n'a aucun poids, c'est très perturbant."},
     {"min": 97, "max": 98, "type_id": "melee", "name": "Faux de l'Ankou", "base_stats": {"Dégâts": 30, "Esprit": 5}, "description": "La lame est glaciale."},
     {"min": 99, "max": 100, "type_id": "melee", "name": "Excalibur", "base_stats": {"Dégâts": 35, "Charisme": 10}, "description": "L'épée des rois. Elle murmure des promesses de gloire."},
-
+    
     {"min": 1, "max": 2, "type_id": "armor", "name": "Feuille de chou géante", "base_stats": {"Défense": 0}, "description": "Ne protège de rien, mais attire les lapins."},
     {"min": 3, "max": 4, "type_id": "armor", "name": "Vêtements en haillons", "base_stats": {"Défense": 0}, "description": "Des bouts de tissu déchirés."},
     {"min": 5, "max": 6, "type_id": "armor", "name": "Sac à patates", "base_stats": {"Défense": 1, "Poids": 1}, "description": "Ça gratte terriblement."},

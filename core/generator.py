@@ -43,3 +43,10 @@ def get_unique_effect(roll): return get_from_table(UNIQUE_EFFECTS, roll)
 def get_set_info(set_id):
     if isinstance(SETS, dict): return SETS.get(set_id, None)
     return None
+def get_bounds(table):
+    """Scan un tableau JSON pour trouver le min global et le max global."""
+    if not table:
+        return 1, 1
+    min_val = min(entry.get("min", 1) for entry in table)
+    max_val = max(entry.get("max", 1) for entry in table)
+    return min_val, max_val
