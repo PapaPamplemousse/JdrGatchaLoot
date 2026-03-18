@@ -31,7 +31,7 @@ class LootCasinoApp(tk.Tk):
 
         pity_cfg = generator.GACHA_DATA.get("pity", {})
         self.pity_counter = pity_cfg.get("current_pity", 0)
-        self.pity_max = pity_cfg.get("max_pity", 5)
+        self.pity_max = pity_cfg.get("max_pity", 10)
         self.pity_threshold = pity_cfg.get("max_roll_to_increment", 3)
 
         self.soul_fragments = generator.GACHA_DATA.get("soul_fragments", 0)

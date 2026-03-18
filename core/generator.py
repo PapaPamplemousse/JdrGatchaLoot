@@ -77,7 +77,7 @@ def load_gacha_data():
             return data
     except FileNotFoundError:
         return {
-            "pity": {"max_pity": 5, "max_roll_to_increment": 5, "current_pity": 0},
+            "pity": {"max_pity": 10, "max_roll_to_increment": 3, "current_pity": 0},
             "soul_fragments": 0,
             "total_rolls": 0,
             "debt_po": 0,
