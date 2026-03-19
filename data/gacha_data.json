@@ -2,15 +2,10 @@
     "pity": {
         "max_pity": 10,
         "max_roll_to_increment": 3,
-        "current_pity": 7
+        "current_pity": 0
     },
-    "soul_fragments": 4,
-    "total_rolls": 11,
+    "soul_fragments": 0,
+    "total_rolls": 0,
     "debt_po": 0,
-    "discovered_bases": [
-        "Clochette : Chat de Goutti\u00e8re",
-        "Potion de Soin P\u00e9rim\u00e9e",
-        "Dague d'Obsidienne",
-        "Bracelet de force"
-    ]
+    "discovered_bases": []
 }

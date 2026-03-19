@@ -1,27 +1,58 @@
 [
-    {
-        "name": "Poches Trouées",
-        "description": "Vos bourses se déchirent mystérieusement. Vous perdez 10% de votre or à chaque repos long.",
-        "duration": "3 Jours"
-    },
-    {
-        "name": "Paranoïa Aiguë",
-        "description": "Vous êtes persuadé que le coffre vous observe. Impossible de bénéficier des effets d'un repos long.",
-        "duration": "1d4 Jours"
-    },
-    {
-        "name": "Cécité Nocturne",
-        "description": "Les ombres semblent s'agripper à vos yeux. Vous êtes considéré comme aveugle dans la pénombre.",
-        "duration": "2 Jours"
-    },
-    {
-        "name": "Aura de Malchance",
-        "description": "Le destin vous en veut personnellement. Désavantage sur tous vos jets de sauvegarde.",
-        "duration": "24 Heures"
-    },
-    {
-        "name": "Mains de Beurre",
-        "description": "Sur un jet d'attaque naturel de 1, 2 ou 3, votre arme vous glisse des mains et tombe au sol.",
-        "duration": "1d6 Jours"
-    }
+    {"name": "Poches Trouées","description": "Vos bourses se déchirent mystérieusement. Vous perdez 10% de votre or à chaque repos long.","duration": "3 Jours"},
+    {"name": "Paranoïa Aiguë","description": "Vous êtes persuadé que le coffre vous observe. Impossible de bénéficier des effets d'un repos long.","duration": "1d4 Jours"},
+    {"name": "Cécité Nocturne","description": "Les ombres semblent s'agripper à vos yeux. Vous êtes considéré comme aveugle dans la pénombre.","duration": "2 Jours"},
+    {"name": "Aura de Malchance","description": "Le destin vous en veut personnellement. Désavantage sur tous vos jets de sauvegarde.","duration": "24 Heures"},
+    {"name": "Mains de Beurre","description": "Sur un jet d'attaque naturel de 1, 2 ou 3, votre arme vous glisse des mains et tombe au sol.","duration": "1d6 Jours"},
+    { "name": "Hoquet Arcanique", "description": "Chaque fois que vous lancez un sort, vous avez 25% de chances de lâcher un hoquet sonore qui annule le sort et vous inflige 1d4 dégâts de force.", "duration": "1d4 Jours" },
+    { "name": "Sueurs Froides de l'Avare", "description": "Toucher une pièce d'or vous inflige une décharge électrique (1 dégât de foudre). Vous devez porter des gants pour manipuler votre trésor.", "duration": "7 Jours" },
+    { "name": "L'Odeur du Trépas", "description": "Vous dégagez une odeur de cadavre en décomposition. Désavantage sur tous les jets de Charisme (Persuasion) mais Avantage sur l'Intimidation.", "duration": "3 Jours" },
+    { "name": "Langue de Plomb", "description": "Votre langue pèse littéralement 2kg. Votre élocution est pâteuse. Impossible de lancer des sorts avec une composante verbale.", "duration": "24 Heures" },
+    { "name": "Sympathie Arachnéenne", "description": "Toutes les araignées dans un rayon de 30m sont attirées par vous. Elles ne sont pas agressives, elles veulent juste grimper sur votre visage.", "duration": "Permament (jusqu'à délivrance)" },
+    { "name": "Éternuement Explosif", "description": "Quand vous éternuez, une petite explosion de feu sort de vos narines. 1d6 dégâts de feu à vous-même et aux créatures à 1,5m.", "duration": "1d6 Jours" },
+    { "name": "Double Gaucher", "description": "Vos deux mains deviennent des mains gauches (ou droites si vous étiez gaucher). Désavantage sur les jets d'attaque avec des armes à deux mains.", "duration": "48 Heures" },
+    { "name": "L'Ombre Rebelle", "description": "Votre ombre ne suit plus vos mouvements. Elle passe son temps à faire des gestes insultants aux PNJ importants derrière votre dos.", "duration": "5 Jours" },
+    { "name": "Sang de Sirop", "description": "Votre sang devient épais et sucré. Votre vitesse de déplacement est réduite de 3m et les insectes vous traquent sans relâche.", "duration": "1d4 Jours" },
+    { "name": "Cri de Guerre Ridicule", "description": "Dès que vous entrez en combat, vous poussez un cri de poulet égorgé. Vous ne pouvez pas être surpris, mais vous ne pouvez pas surprendre non plus.", "duration": "3 Jours" },
+    { "name": "Pesanteur Localisée", "description": "Vos bottes pèsent soudainement 50kg chacune. Sauter est impossible et traverser de la boue nécessite un jet de Force (Athlétisme) DD15.", "duration": "24 Heures" },
+    { "name": "Peau de Parchemin", "description": "Votre peau devient sèche et cassante. Chaque fois que vous subissez des dégâts contondants, vous perdez 1 point de CA supplémentaire (cumulable jusqu'à -5).", "duration": "3 Jours" },
+    { "name": "Regard du Méduse (Raté)", "description": "Tout ce que vous regardez intensément devient... légèrement tiède. Aucun effet en combat, mais votre bière est toujours dégueulasse.", "duration": "Indéterminée" },
+    { "name": "Ventriloquie Involontaire", "description": "Votre estomac parle à votre place. Il dit tout haut ce que vous pensez tout bas avec une voix de crécelle.", "duration": "1d4 Jours" },
+    { "name": "Phobie des Portes", "description": "Vous devez réussir un jet de Sagesse (DD12) pour oser franchir une porte fermée. Si vous échouez, vous devez passer par la fenêtre.", "duration": "2 Jours" },
+    { "name": "Ongles de Fer", "description": "Vos ongles poussent de 10cm par heure et sont aussi durs que l'acier. Manipuler des objets fins (crocheter, écrire) est impossible.", "duration": "24 Heures" },
+    { "name": "Larmes de Sang", "description": "Vous pleurez du sang en permanence. Vous êtes aveuglé après 2 rounds de combat à cause du sang dans les yeux. Nécessite une action pour s'essuyer.", "duration": "1d4 Jours" },
+    { "name": "Attraction Métallique", "description": "Vous devenez un aimant. Les flèches avec une pointe en fer ont l'avantage contre vous.", "duration": "2 Jours" },
+    { "name": "Échos de la Douleur", "description": "Chaque fois que vous subissez des dégâts, vous les ressentez à nouveau (1d4 dégâts psychiques) au début de votre prochain tour.", "duration": "24 Heures" },
+    { "name": "Sommeil de Pierre", "description": "Pendant votre repos long, vous devenez littéralement une statue de pierre. Impossible de vous réveiller avant la fin des 8 heures, même en cas d'attaque.", "duration": "3 Jours" },
+    { "name": "Transpiration de Ghee", "description": "Vous suintez du beurre clarifié. Vous avez un désavantage pour maintenir une emprise (lutte) ou tenir votre arme, mais vous sortez facilement des liens.", "duration": "1d6 Jours" },
+    { "name": "Voix de Castrat", "description": "Votre voix monte de trois octaves. Toute tentative d'Intimidation échoue automatiquement.", "duration": "48 Heures" },
+    { "name": "Maudite Politesse", "description": "Vous ne pouvez pas attaquer une créature sans l'avoir saluée formellement et attendu qu'elle réponde.", "duration": "3 Jours" },
+    { "name": "Le Pas Pesant", "description": "Chaque pas que vous faites résonne comme un coup de tonnerre. Discrétion impossible.", "duration": "24 Heures" },
+    { "name": "Estomac de Chèvre", "description": "Vous ne pouvez plus manger de nourriture normale, seulement du bois, du tissu ou du métal.", "duration": "1d4 Jours" },
+    { "name": "Vision Inversée", "description": "Vous voyez le monde à l'envers (haut/bas). Désavantage sur tous les jets d'attaque et de caractéristique basés sur la vue.", "duration": "12 Heures" },
+    { "name": "L'Ami des Corbeaux", "description": "1d12 corbeaux vous suivent partout en croassant votre nom de famille. Discrétion impossible en extérieur.", "duration": "5 Jours" },
+    { "name": "Doigts de Pied Palmés", "description": "Vos pieds deviennent des palmes. +3m de vitesse de nage, mais -3m de vitesse de marche.", "duration": "1 Semaine" },
+    { "name": "Rire Nerveux", "description": "Dès que vous subissez des dégâts, vous riez de manière hystérique pendant 1 round. Vous ne pouvez pas utiliser de réaction.", "duration": "2 Jours" },
+    { "name": "Poils de Sanglier", "description": "Des poils drus et piquants poussent sur tout votre corps. Porter une armure vous inflige 1 point de dégât par tour.", "duration": "3 Jours" },
+    { "name": "Invisibilité des Vêtements", "description": "Vos vêtements deviennent invisibles, mais pas vous. Vous avez l'air de vous promener nu en permanence.", "duration": "1d4 Jours" },
+    { "name": "L'Aimant à Foudre", "description": "S'il y a un orage, la foudre tombe prioritairement sur vous (Dégâts : 3d10).", "duration": "Indéfinie" },
+    { "name": "Terreur des Lapins", "description": "Tous les petits animaux mignons (lapins, écureuils) vous attaquent à vue avec une rage féroce.", "duration": "3 Jours" },
+    { "name": "Daltonisme Magique", "description": "Toutes les potions ont la même couleur grise pour vous. Bonne chance pour distinguer le soin du poison.", "duration": "7 Jours" },
+    { "name": "Fausse Mort", "description": "Si vous tombez à 0 PV, vous ne faites pas de jets de sauvegarde contre la mort. Vous devenez un tas de cendres qui se reforme après 1 heure avec 1 PV.", "duration": "Permanent" },
+    { "name": "Mains de Colle", "description": "Le premier objet que vous touchez après un repos long reste collé à votre main.", "duration": "24 Heures" },
+    { "name": "Soif de Sel", "description": "Vous devez consommer une poignée de sel toutes les heures ou subir un niveau de fatigue.", "duration": "1d4 Jours" },
+    { "name": "Le Nom Perdu", "description": "Personne ne peut se souvenir de votre nom. Même vos compagnons vous appellent 'Hé, machin'.", "duration": "3 Jours" },
+    { "name": "Pétrification Lente", "description": "Vos articulations durcissent. Votre CA augmente de +2, mais votre vitesse est divisée par deux.", "duration": "2 Jours" },
+    { "name": "Miroir Brisé", "description": "Votre reflet dans le miroir sort et essaie de vous étrangler à chaque fois que vous en croisez un.", "duration": "Indéfinie" },
+    { "name": "Allergie à l'Acier", "description": "Toucher du métal vous donne des plaques d'eczéma. Désavantage aux jets d'attaque avec des armes en métal.", "duration": "48 Heures" },
+    { "name": "Bouche Cousue", "description": "Vos lèvres fusionnent. Impossible de parler ou de manger. Télépathie requise pour communiquer.", "duration": "12 Heures" },
+    { "name": "Malédiction du Narrateur", "description": "Une voix céleste commente toutes vos actions à voix haute, révélant vos intentions cachées.", "duration": "1d4 Jours" },
+    { "name": "Somnambulisme Belliqueux", "description": "Pendant votre repos long, vous vous levez et attaquez le membre du groupe le plus proche avec vos poings.", "duration": "3 Nuits" },
+    { "name": "Vieillesse Subite", "description": "Vous prenez 40 ans physiquement. Désavantage sur les jets de Force et Constitution, mais Avantage sur l'Histoire et les Arcanes.", "duration": "1d6 Jours" },
+    { "name": "Pieds Légers", "description": "Vous lévitez à 5cm du sol. Vous ne déclenchez pas de pièges au sol, mais vous avez un malus de -5 en Force pour ne pas être poussé.", "duration": "2 Jours" },
+    { "name": "Marque du Traître", "description": "Une croix rouge brille sur votre front. Les gardes et autorités vous suspectent immédiatement de n'importe quel crime.", "duration": "5 Jours" },
+    { "name": "Désynchronisation", "description": "Votre corps a 1 seconde de retard sur votre esprit. Vous avez un malus de -2 à l'Initiative et à la CA.", "duration": "3 Jours" },
+    { "name": "L'Appel du Vide", "description": "Chaque fois que vous êtes près d'un précipice, vous devez réussir un jet de Sagesse (DD14) pour ne pas sauter.", "duration": "1d4 Jours" },
+    { "name": "Berserker de Politesse", "description": "Si quelqu'un vous insulte, vous entrez en rage (comme un Barbare), mais vous ne pouvez attaquer qu'avec des gifles.", "duration": "24 Heures" }
+
 ]

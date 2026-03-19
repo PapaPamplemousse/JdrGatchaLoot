@@ -25,11 +25,40 @@ def load_json(filename):
 
 TIERS = load_json("tiers.json")
 ITEM_TYPES = load_json("item_types.json")
-BASE_ITEMS = load_json("base_items.json")
 AFFIXES = load_json("affixes.json")
 SCROLLS = load_json("scrolls.json")
 UNIQUE_EFFECTS = load_json("unique_effects.json")
 SETS = load_json("sets.json")
+
+def load_all_base_items():
+    """Lit l'index base_items.json puis fusionne tous les sous-fichiers."""
+    items_list = []
+    index_file = os.path.join(DATA_DIR, "base_items.json")
+    
+    try:
+        # 1. On lit le sommaire
+        with open(index_file, "r", encoding="utf-8") as f:
+            file_links = json.load(f)
+            
+        # 2. On boucle sur chaque fichier listé
+        for filename in file_links:
+            file_path = os.path.join(DATA_DIR, filename)
+            try:
+                with open(file_path, "r", encoding="utf-8") as sub_f:
+                    sub_items = json.load(sub_f)
+                    items_list.extend(sub_items) # On fusionne tout dans la grande liste
+            except FileNotFoundError:
+                print(f"!! Attention : Le fichier {filename} est introuvable.")
+            except json.JSONDecodeError:
+                print(f"!! Attention : Erreur de format JSON dans {filename}.")
+                
+    except FileNotFoundError:
+        print("!! Le fichier d'index 'base_items.json' est introuvable.")
+        
+    return items_list
+
+# On charge la liste géante fusionnée en mémoire pour le reste de l'application
+BASE_ITEMS = load_all_base_items()
 
 def get_from_table(table, roll):
     for entry in table:

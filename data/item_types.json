@@ -5,7 +5,7 @@
     {"min": 51, "max": 60, "name": "Accessoire", "id": "accessory"},
     {"min": 61, "max": 70, "name": "Parchemin Magique", "id": "scroll"},
     {"min": 71, "max": 82, "name": "Consommable", "id": "consumable"},
-    {"min": 83, "max": 94, "name": "Ressource & Artisanat", "id": "resource"},
-    {"min": 95, "max": 98, "name": "Artefact", "id": "artifact"},
-    {"min": 99, "max": 100, "name": "Cristal de Compagnon", "id": "pet_capsule"}
+    {"min": 83, "max": 90, "name": "Ressource & Artisanat", "id": "resource"},
+    {"min": 91, "max": 97, "name": "Artefact", "id": "artifact"},
+    {"min": 98, "max": 100, "name": "Cristal de Compagnon", "id": "pet_capsule"}
 ]

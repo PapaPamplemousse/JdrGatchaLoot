@@ -438,6 +438,7 @@ class LootCasinoApp(tk.Tk):
         if "Logistique" in selected_banner: banner_cost = 1
         elif "Armurerie" in selected_banner: banner_cost = 2
         elif "Mystique" in selected_banner: banner_cost = 5
+        elif "Éleveur" in selected_banner: banner_cost = 10
 
         if banner_cost > 0:
             if self.soul_fragments < banner_cost:
@@ -562,6 +563,11 @@ class LootCasinoApp(tk.Tk):
         elif "Logistique" in selected_banner:
             # Consommables et ressources d'artisanat
             allowed = ["consumable", "resource"]
+            filtered_types = [t for t in generator.ITEM_TYPES if t["id"] in allowed]
+            type_data = random.choice(filtered_types)
+
+        elif "Éleveur" in selected_banner:
+            allowed = ["pet_capsule"]
             filtered_types = [t for t in generator.ITEM_TYPES if t["id"] in allowed]
             type_data = random.choice(filtered_types)
             

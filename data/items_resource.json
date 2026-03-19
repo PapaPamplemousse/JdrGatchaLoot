@@ -1,0 +1,18 @@
+[
+     
+    {"min": 1, "max": 10, "type_id": "resource", "name": "Tas de ferraille", "base_stats": {"Poids": 5}, "description": "Clous tordus et débris métalliques. Utilisable pour des réparations sommaires."},
+    {"min": 11, "max": 20, "type_id": "resource", "name": "Chutes de tissu", "base_stats": {"Poids": 1}, "description": "Lambeaux de lin et de coton. Utile pour confectionner des bandages ou des rembourrages."},
+    {"min": 21, "max": 30, "type_id": "resource", "name": "Bois de chauffage", "base_stats": {"Poids": 3}, "description": "Bûches sèches. Indispensable pour le campement ou la forge de base."},
+    {"min": 31, "max": 40, "type_id": "resource", "name": "Minerai de Fer Brut", "base_stats": {"Poids": 4}, "description": "Roche contenant du fer. Nécessite une fonte pour obtenir des lingots."},
+    {"min": 41, "max": 48, "type_id": "resource", "name": "Cuir tanné", "base_stats": {"Poids": 2}, "description": "Peau d'animal traitée. Matériau de base pour les armures légères et les lanières."},
+    {"min": 49, "max": 56, "type_id": "resource", "name": "Lingot de Bronze", "base_stats": {"Poids": 3}, "description": "Alliage de cuivre et d'étain. Utilisé pour les outils et les armes d'entraînement."},
+    {"min": 57, "max": 64, "type_id": "resource", "name": "Os de monstre", "base_stats": {"Poids": 2}, "description": "Fragments d'os solides. Utilisés en alchimie ou pour l'artisanat tribal."},
+    {"min": 65, "max": 72, "type_id": "resource", "name": "Fiole d'Huile de Lin", "base_stats": {"Poids": 0.5}, "description": "Produit d'entretien pour le bois et le cuir. Améliore la durabilité."},
+    {"min": 73, "max": 78, "type_id": "resource", "name": "Charbon de qualité", "base_stats": {"Poids": 2}, "description": "Combustible à haute température. Nécessaire pour le travail de l'acier."},
+    {"min": 79, "max": 84, "type_id": "resource", "name": "Fil de soie", "base_stats": {"Poids": 0.1}, "description": "Fil robuste et fin. Utilisé pour les vêtements de luxe ou les cordes d'arcs."},
+    {"min": 85, "max": 90, "type_id": "resource", "name": "Saphir Parfait", "base_stats": {"Valeur": 500}, "description": "Gemme d'une pureté absolue. Utilisée en joaillerie ou comme composant de sort."},
+    {"min": 91, "max": 94, "type_id": "resource", "name": "Lingot d'Acier", "base_stats": {"Poids": 3}, "description": "Fer raffiné. Matériau standard pour les armes et armures de qualité supérieure."},
+    {"min": 95, "max": 97, "type_id": "resource", "name": "Lingot de Mythril", "base_stats": {"Poids": 2}, "description": "Métal extrêmement léger et résistant. Utilisé pour l'équipement de très haut niveau."},
+    {"min": 98, "max": 99, "type_id": "resource", "name": "Éclat d'Adamantium", "base_stats": {"Poids": 5}, "description": "Métal d'une dureté inégalée. Rend les objets pratiquement indestructibles."},
+    {"min": 100, "max": 100, "type_id": "resource", "name": "Cœur de Démon Palpitant", "base_stats": {"Poids": 1}, "description": "Organe magique actif. Composant requis pour la forge d'artefacts maudits ou légendaires."}
+]
