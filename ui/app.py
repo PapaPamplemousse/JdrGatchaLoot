@@ -12,6 +12,22 @@ from core import generator
 from core.models import LootItem
 from core.audio import audio_player
 
+try:
+    import ctypes
+    myappid = 'hugo.gachaloot.casino.1.0'
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except Exception:
+    pass
+# --------------
+
+def resource_path(relative_path):
+    """Obtient le chemin absolu vers la ressource, compatible dev et PyInstaller."""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
 class LootCasinoApp(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -23,6 +39,21 @@ class LootCasinoApp(tk.Tk):
         
         self.configure(bg="#222")
         
+        icon_ico_path = resource_path(os.path.join("assets", "casicon.ico"))
+        icon_png_path = resource_path(os.path.join("assets", "casicon.png"))
+        
+        try:
+            # 1. On tente le format natif Windows (.ico)
+            self.iconbitmap(icon_ico_path)
+        except Exception:
+            try:
+                # 2. Si ça rate, on force l'icône via un PhotoImage (.png)
+                # (Assure-toi d'avoir un 'casicon.png' dans ton dossier assets !)
+                img = tk.PhotoImage(file=icon_png_path)
+                self.iconphoto(True, img)
+            except Exception as e:
+                print(f"Aucune icône n'a pu être chargée : {e}")
+                
         self.current_items = []
         self.jackpot_history = []
         self.session_total_pc = 0
@@ -38,6 +69,14 @@ class LootCasinoApp(tk.Tk):
         self.frag_icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "soul_fragment.png")
         
         self.build_start_screen()
+
+        # On utilise le PNG pour Tkinter, c'est 100% fiable
+        icon_path = resource_path(os.path.join("assets", "casicon.png"))
+        try:
+            icon_img = tk.PhotoImage(file=icon_path)
+            self.iconphoto(True, icon_img)
+        except Exception as e:
+            print(f"Erreur icône Tkinter : {e}")
 
     def launch_game(self, cursed):
         self.is_cursed_mode = cursed
@@ -330,18 +369,15 @@ class LootCasinoApp(tk.Tk):
             self.input_panel.update_soul_fragments(self.soul_fragments)
             self._update_debt_display()
             
-            curses = [
-                "Vulnérabilité au Feu et à l'Acide.", 
-                "Malchance : Désavantage sur vos jets de sauvegarde.", 
-                "Paranoïa : Impossible de faire un repos long réparateur.", 
-                "Poches trouées : Vous perdez 10% de votre or par jour.",
-                "Cécité nocturne : Vous êtes aveugle dans la pénombre."
-            ]
-            chosen_curse = random.choice(curses)
+            
+            curse = generator.get_random_curse()
             
             self.result_panel.clear()
             self.result_panel.set_banner("Vide")
-            self.result_panel.append_text(f"☠ CONTRAT SIGNÉ ☠ \n\n+5 Fragments d'Âme reçus.\n-1000 PO de Dette ajoutés au registre.\n\nMALÉDICTION ACTIVE : {chosen_curse}\n")
+            # self.result_panel.append_text(f"☠ CONTRAT SIGNÉ ☠ \n\n+5 Fragments d'Âme reçus.\n-1000 PO de Dette ajoutés au registre.\n\nMALÉDICTION ACTIVE : {chosen_curse}\n")
+            self.result_panel.append_text(f"☠ MALÉDICTION ACTIVE : {curse['name']} ☠")
+            self.result_panel.append_text(f"Effet : {curse['description']}")
+            self.result_panel.append_text("Durée : TANT QUE LA DETTE N'EST PAS PAYÉE !")
             self.result_panel.append_text("Le Casino vous remercie de votre fidélité éternelle.")
 
     def handle_forge(self):
@@ -428,23 +464,43 @@ class LootCasinoApp(tk.Tk):
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
             return
 
-        if not is_pity_pull:
-            if tier_data["name"] == "Legendary":
-                self.pity_counter = 0 
-                generator.save_gacha_pity(self.pity_counter)
+        tier_data = tier_data.copy()
+
+        if original_roll <= self.pity_threshold and not is_pity_pull:
             
-            elif tier_data["name"] == "Common":
+            # 1. Remplacement forcé du Loot (60% Vide / 40% Commun)
+            if original_roll == 1:
+                tier_data = {"name": "Vide"}
+                tier_data["force_mimic"] = True
+            else:
+                if random.randint(1, 100) <= 60:
+                    tier_data = {"name": "Vide"}
+                    tier_data["force_mimic"] = False
+                else:
+                    tier_data = {"name": "Common"}
+            
+            # 2. La Malédiction (50% de chance)
+            if random.randint(1, 100) <= 50:
+                tier_data["curse"] = generator.get_random_curse()
+
+            # 3. Progression de la barre de pitié et fragments
+            self.pity_counter += 1
+            generator.save_gacha_pity(self.pity_counter)
+            
+            if tier_data["name"] == "Common":
                 self.soul_fragments += 1
                 generator.save_gacha_fragments(self.soul_fragments)
                 self.input_panel.update_soul_fragments(self.soul_fragments)
 
-                if original_roll <= self.pity_threshold:
-                    self.pity_counter += 1
-                    generator.save_gacha_pity(self.pity_counter)
-            
-            elif original_roll <= self.pity_threshold and tier_data["name"] != "Vide":
-                self.pity_counter += 1
+        # Si c'est un jet normal (au-dessus du seuil de pitié)
+        elif not is_pity_pull:
+            if tier_data["name"] == "Legendary":
+                self.pity_counter = 0 
                 generator.save_gacha_pity(self.pity_counter)
+            elif tier_data["name"] == "Common":
+                self.soul_fragments += 1
+                generator.save_gacha_fragments(self.soul_fragments)
+                self.input_panel.update_soul_fragments(self.soul_fragments)
                 
         self.update_pity_bar()
 
@@ -579,8 +635,12 @@ class LootCasinoApp(tk.Tk):
     def generate_and_display(self, tier_data):
         if tier_data["name"] == "Vide":
             self.result_panel.clear()
-            self.result_panel.set_banner("Vide")
-            if random.randint(1, 100) <= 68:
+            self.result_panel.set_banner("Vide") 
+            
+            # Si le jeu a forcé le mimic (jet de 1), ou jet de Mimic classique (68%)
+            is_mimic = tier_data.get("force_mimic", False) or random.randint(1, 100) <= 68
+            
+            if is_mimic:
                 mimic_art = (
                     "      _____\n"
                     "     /     \\ \n"
@@ -588,20 +648,28 @@ class LootCasinoApp(tk.Tk):
                     "     \\  ^  /\n"
                     "      |||||\n\n"
                 )
-                self.result_panel.append_text("⚠ ATTENTION ! Ce n'est pas de la poussière... ⚠\n\n")
-                self.result_panel.append_text(mimic_art)
-                self.result_panel.append_text("Le coffre révèle des dents acérées et une langue violacée !\n")
-                self.result_panel.append_text("C'EST UN MIMIC ! Il vous attaque ! ")
+                self.result_panel.append_text("⚠ ATTENTION ! Ce n'est pas de la poussière... ⚠\n\n", "danger")
+                self.result_panel.append_text(mimic_art, "danger")
+                self.result_panel.append_text("Le coffre révèle des dents acérées et une langue violacée !\n", "danger")
+                self.result_panel.append_text("C'EST UN MIMIC ! Il vous attaque ! ", "danger")
             else:
-                self.result_panel.append_text("¯\_(oo))_/¯ LE COFFRE EST VIDE...\n\n")
-                self.result_panel.append_text("Il n'y a absolument rien ici à part de la poussière.")
+                self.result_panel.append_text("\\_(oo))_/¯ LE COFFRE EST VIDE...\n\n", "danger")
+                self.result_panel.append_text("Il n'y a absolument rien ici à part de la poussière.", "danger")
+                
+            # --- AFFICHAGE DE LA MALÉDICTION ---
+            if "curse" in tier_data:
+                curse = tier_data["curse"]
+                self.result_panel.append_text(f"\n☠ MALÉDICTION SUBIE : {curse['name']} ☠", "danger")
+                self.result_panel.append_text(f"Effet : {curse['description']}", "danger")
+                self.result_panel.append_text(f"Durée : {curse['duration']}", "danger")
+
             self.input_panel.btn_lancer.config(state=tk.NORMAL)
-        # --- NOUVEAU : LA PROPOSITION MAUDITE ---
+            
+            # Proposition Maudite si mode activé
             if self.is_cursed_mode:
                 if messagebox.askyesno("Pacte de Sang", "Votre tirage est perdu...\n\nL'entité vous propose un marché :\nSacrifiez ENCORE 1 PV MAX pour relancer le dé immédiatement. Acceptez-vous ?"):
                     self.result_panel.append_text("\n\n☙ [PACTE] Vous sacrifiez une partie de votre âme (-1 PV MAX).")
-                    self.result_panel.append_text("Le coffre se referme dans un bruit visqueux... Relancez le dé ! ☙")
-                    # On laisse le bouton de lancer actif pour qu'il rejoue !
+                    self.result_panel.append_text("Le coffre se referme dans un bruit visqueux... Relancez le dé ! n☙")
             return
             
         item = self._build_single_item(tier_data)
@@ -611,8 +679,15 @@ class LootCasinoApp(tk.Tk):
             self.result_panel.set_banner(item.tier)
             self.current_items.append(item)
             self.result_panel.display_item(item)
-            self.after(500, self.ask_jackpot)
+            
+            # Si le joueur a eu la chance d'avoir un Commun, mais qu'il est quand même maudit
+            if "curse" in tier_data:
+                curse = tier_data["curse"]
+                self.result_panel.append_text(f"\n☠ MALÉDICTION SUBIE : {curse['name']} ☠", "danger")
+                self.result_panel.append_text(f"Effet : {curse['description']}", "danger")
+                self.result_panel.append_text(f"Durée : {curse['duration']}", "danger")
 
+            self.after(500, self.ask_jackpot)
     def ask_jackpot(self):
         # --- NOUVEAU : On affiche le gros bouton au lieu du pop-up ---
         self.result_panel.append_text("\n $$$ [?] VOULEZ-VOUS TENTER LE le JACKPOT ??? $$$ ")

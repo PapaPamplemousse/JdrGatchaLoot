@@ -1,0 +1,27 @@
+[
+    {
+        "name": "Poches Trouées",
+        "description": "Vos bourses se déchirent mystérieusement. Vous perdez 10% de votre or à chaque repos long.",
+        "duration": "3 Jours"
+    },
+    {
+        "name": "Paranoïa Aiguë",
+        "description": "Vous êtes persuadé que le coffre vous observe. Impossible de bénéficier des effets d'un repos long.",
+        "duration": "1d4 Jours"
+    },
+    {
+        "name": "Cécité Nocturne",
+        "description": "Les ombres semblent s'agripper à vos yeux. Vous êtes considéré comme aveugle dans la pénombre.",
+        "duration": "2 Jours"
+    },
+    {
+        "name": "Aura de Malchance",
+        "description": "Le destin vous en veut personnellement. Désavantage sur tous vos jets de sauvegarde.",
+        "duration": "24 Heures"
+    },
+    {
+        "name": "Mains de Beurre",
+        "description": "Sur un jet d'attaque naturel de 1, 2 ou 3, votre arme vous glisse des mains et tombe au sol.",
+        "duration": "1d6 Jours"
+    }
+]

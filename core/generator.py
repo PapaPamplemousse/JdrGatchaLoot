@@ -1,11 +1,10 @@
 import json
 import os
+import random
 from .models import LootItem
 import sys
 
-# Chemin relatif vers le dossier data
-# BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# DATA_DIR = os.path.join(BASE_DIR, "data")
+
 def get_resource_path():
     """Obtient le dossier absolu, compatible avec PyInstaller."""
     if getattr(sys, 'frozen', False):
@@ -134,3 +133,21 @@ def _save_all_data():
             json.dump(GACHA_DATA, f, indent=4)
     except Exception as e:
         print(f"Erreur lors de la sauvegarde Gacha : {e}")
+
+CURSES_FILE = os.path.join(DATA_DIR, "curses.json")
+
+def load_curses():
+    try:
+        with open(CURSES_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Malédiction de secours si le fichier manque
+        return [{"name": "Malchance Gacha", "description": "Désavantage sur tout.", "duration": "1 Jour"}]
+
+CURSES = load_curses()
+
+def get_random_curse():
+    """Tire une malédiction aléatoire depuis le JSON."""
+    if not CURSES:
+        return {"name": "Malchance Gacha", "description": "Désavantage sur tout.", "duration": "1 Jour"}
+    return random.choice(CURSES)

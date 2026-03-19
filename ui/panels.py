@@ -193,6 +193,8 @@ class ResultPanel(tk.Frame):
         self.text_area = tk.Text(self, bg="#1E1E1E", fg="#00FF00", font=("Consolas", 11), state=tk.DISABLED, wrap=tk.WORD)
         self.text_area.pack(expand=True, fill=tk.BOTH)
 
+        self.text_area.tag_config("danger", foreground="#FF4444")
+
 
     def set_banner(self, tier_name, is_multi=False):
         """Met à jour le bandeau supérieur. Adapte le texte si c'est un multi-tirage."""
@@ -294,9 +296,13 @@ class ResultPanel(tk.Frame):
         self.text_area.insert(tk.END, output)
         self.text_area.config(state=tk.DISABLED)
         
-    def append_text(self, text):
+    def append_text(self, text, tag=None):
+        """Ajoute du texte. Si tag='danger', le texte s'affiche en rouge."""
         self.text_area.config(state=tk.NORMAL)
-        self.text_area.insert(tk.END, text + "\n")
+        if tag:
+            self.text_area.insert(tk.END, text + "\n", tag)
+        else:
+            self.text_area.insert(tk.END, text + "\n")
         self.text_area.see(tk.END)
         self.text_area.config(state=tk.DISABLED)
         
